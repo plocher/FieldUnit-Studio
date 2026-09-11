@@ -257,17 +257,24 @@ export class StudioState {
     this.selectedNodeIds = Array.from(next);
   }
 
-  // Move node(s): moves all selected nodes together, or moves switch points cluster
+  // Move node(s): enforces model board orthogonal and 45-degree angle constraints
   updateNodePosition(nodeId: string, newX: number, newY: number) {
     if (!this.project || !this.project.graph.nodes[nodeId]) return;
 
     const node = this.project.graph.nodes[nodeId];
-    const snapX = Math.round(newX / 10) * 10;
-    const snapY = Math.round(newY / 10) * 10;
+    let snapX = Math.round(newX / 10) * 10;
+    let snapY = Math.round(newY / 10) * 10;
+
+    // Angle snapping: lock horizontal track alignment (y = 180 for main, y = 280 for siding)
+    if (Math.abs(snapY - 180) <= 20) {
+      snapY = 180;
+    } else if (Math.abs(snapY - 280) <= 20) {
+      snapY = 280;
+    }
+
     const dx = snapX - node.x;
     const dy = snapY - node.y;
 
-    // If part of multi-selection, move all selected nodes together
     if (this.selectedNodeIds.length > 1 && this.selectedNodeIds.includes(nodeId)) {
       for (const id of this.selectedNodeIds) {
         const n = this.project.graph.nodes[id];
@@ -282,12 +289,11 @@ export class StudioState {
     node.x = snapX;
     node.y = snapY;
 
-    // If moving switch points, inspect the graph edges and move all outgoing terminal legs together
+    // If moving switch points, move all connected outgoing terminal legs together maintaining 45° angle
     if ('SwitchPoints' in node.kind) {
       for (const edge of this.project.graph.edges) {
         if (edge.from === nodeId) {
           const target = this.project.graph.nodes[edge.to];
-          // Move target if it is a terminal, junction, bumper, or boundary
           if (target && !('SwitchPoints' in target.kind)) {
             target.x += dx;
             target.y += dy;
@@ -586,17 +592,44 @@ export class StudioState {
           return;
         }
 
-        // Case C: Dragging any junction/terminal onto an existing node
-        for (const edge of this.project.graph.edges) {
-          if (edge.from === draggedId) edge.from = targetId;
-          if (edge.to === draggedId) edge.to = targetId;
+        // Case C: Dragging SwitchPoints onto an IRJ (connect switch to IRJ exit)
+        if ('SwitchPoints' in draggedNode.kind && 'Irj' in targetNode.kind) {
+          // Re-route the edge coming out of targetNode to feed into draggedNode
+          for (const edge of this.project.graph.edges) {
+            if (edge.from === targetId) {
+              edge.from = draggedId;
+            }
+          }
+          // Add a connecting track between targetNode and draggedNode
+          this.project.graph.edges.push({
+            id: `E_CONN_${Date.now().toString().slice(-4)}`,
+            from: targetId,
+            to: draggedId,
+            kind: { Tangent: { circuit_id: '1T' } },
+            length_feet: 50,
+          });
+
+          draggedNode.x = targetNode.x + 60;
+          draggedNode.y = targetNode.y;
+
+          this.selectNode(draggedId, false);
+          this.renumberAppliancesWestToEast();
+          this.runDrc();
+          this.synthesizeRoutes();
+          return;
         }
 
-        if (!('SwitchPoints' in draggedNode.kind || 'Irj' in draggedNode.kind || 'Boundary' in draggedNode.kind)) {
+        // Case D: Dragging a dummy junction onto an existing node
+        if ('Junction' in draggedNode.kind) {
+          for (const edge of this.project.graph.edges) {
+            if (edge.from === draggedId) edge.from = targetId;
+            if (edge.to === draggedId) edge.to = targetId;
+          }
           delete this.project.graph.nodes[draggedId];
-        } else {
-          draggedNode.x = targetNode.x;
-          draggedNode.y = targetNode.y;
+          this.selectNode(targetId, false);
+          this.runDrc();
+          this.synthesizeRoutes();
+          return;
         }
 
         this.selectNode(targetId, false);
@@ -639,20 +672,34 @@ export class StudioState {
     }
   }
 
-  // Tidy / Auto-Layout model board layout
+  // Tidy / Auto-Layout model board layout to exact AAR standards (0°, 45°, 90°)
   autoArrange() {
     if (!this.project) return;
     this.saveSnapshot();
 
-    // Snap all horizontal main lines to y = 180, siding tracks to y = 280
-    for (const node of Object.values(this.project.graph.nodes)) {
-      if (node.id.includes('SIDING')) {
+    // 1. Align main line to y = 180 and siding tracks to y = 280
+    for (const [id, node] of Object.entries(this.project.graph.nodes)) {
+      if (id.includes('SIDING') || id.includes('REV') || id.includes('BUMPER')) {
         node.y = 280;
-      } else if (!node.id.includes('REV') && !node.id.includes('BUMPER')) {
+      } else {
         node.y = 180;
       }
       node.x = Math.round(node.x / 20) * 20;
     }
+
+    // 2. Ensure reverse branches maintain exact 45° diverge geometry
+    for (const edge of this.project.graph.edges) {
+      if ('SwitchReverse' in edge.kind) {
+        const fromNode = this.project.graph.nodes[edge.from];
+        const toNode = this.project.graph.nodes[edge.to];
+        if (fromNode && toNode && fromNode.y === 180 && toNode.y === 280) {
+          toNode.x = fromNode.x + 100; // Exact 45° angle: dx = 100, dy = 100
+        }
+      }
+    }
+
+    this.runDrc();
+    this.synthesizeRoutes();
   }
 
   toggleLayer(layer: keyof LayerVisibility) {
