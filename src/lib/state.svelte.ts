@@ -37,12 +37,41 @@ export class StudioState {
   // Diagnostics
   drcViolations = $state<DrcViolation[]>([]);
 
-  // Computed
+  // Computed: Active selected route
   activeRoute = $derived<SynthesizedRoute | null>(
     this.project && this.selectedRouteId
       ? this.project.routes.find((r) => r.id === this.selectedRouteId) || null
       : null
   );
+
+  // Computed: Dynamic CP Bounding Box based on boundary IRJs and contained nodes
+  cpBounds = $derived.by(() => {
+    if (!this.project) {
+      return { x: 220, y: 135, width: 360, height: 185, centerX: 400, bottomY: 320 };
+    }
+
+    const irjWest = this.project.graph.nodes['IRJ_WEST'];
+    const irjEastMain = this.project.graph.nodes['IRJ_EAST_MAIN'];
+    const irjEastSiding = this.project.graph.nodes['IRJ_EAST_SIDING'];
+
+    const leftX = irjWest ? irjWest.x : 220;
+    const rightX = Math.max(irjEastMain ? irjEastMain.x : 580, irjEastSiding ? irjEastSiding.x : 580);
+
+    const minY = Math.min(irjWest ? irjWest.y : 180, irjEastMain ? irjEastMain.y : 180) - 45;
+    const maxY = Math.max(irjWest ? irjWest.y : 180, irjEastSiding ? irjEastSiding.y : 280) + 45;
+
+    const width = Math.max(rightX - leftX, 100);
+    const height = Math.max(maxY - minY, 80);
+
+    return {
+      x: leftX,
+      y: minY,
+      width,
+      height,
+      centerX: leftX + width / 2,
+      bottomY: minY + height,
+    };
+  });
 
   async loadDemo() {
     try {
@@ -107,6 +136,123 @@ export class StudioState {
 
   toggleLayer(layer: keyof LayerVisibility) {
     this.layers[layer] = !this.layers[layer];
+  }
+
+  // Appliance creation from palette (click or drop)
+  addAppliance(kind: string, targetX?: number, targetY?: number) {
+    if (!this.project) return;
+
+    const cp = this.project.control_points[0];
+    const x = targetX ?? (400 - this.panX) / this.zoom;
+    const y = targetY ?? (200 - this.panY) / this.zoom;
+    const roundedX = Math.round(x / 10) * 10;
+    const roundedY = Math.round(y / 10) * 10;
+
+    const existingSwitches = cp.switches.length;
+    const nextOddSwitch = existingSwitches * 2 + 1;
+    const existingSignals = cp.signal_masts.length;
+    const nextEvenSignal = (existingSignals + 1) * 2;
+
+    switch (kind) {
+      case 'turnout': {
+        const swId = `${nextOddSwitch}`;
+        const nodePtsId = `SW${swId}_PTS`;
+        const nodeNormId = `SW${swId}_NORM`;
+        const nodeRevId = `SW${swId}_REV`;
+
+        this.project.graph.nodes[nodePtsId] = {
+          id: nodePtsId,
+          kind: { SwitchPoints: { switch_id: swId } },
+          x: roundedX,
+          y: roundedY,
+        };
+        this.project.graph.nodes[nodeNormId] = {
+          id: nodeNormId,
+          kind: { Junction: { id: `J_${swId}_N` } },
+          x: roundedX + 100,
+          y: roundedY,
+        };
+        this.project.graph.nodes[nodeRevId] = {
+          id: nodeRevId,
+          kind: { Junction: { id: `J_${swId}_R` } },
+          x: roundedX + 100,
+          y: roundedY + 60,
+        };
+
+        this.project.graph.edges.push({
+          id: `E_SW${swId}_NORM`,
+          from: nodePtsId,
+          to: nodeNormId,
+          kind: { SwitchNormal: { switch_id: swId, circuit_id: `${swId}T` } },
+          length_feet: 100,
+        });
+        this.project.graph.edges.push({
+          id: `E_SW${swId}_REV`,
+          from: nodePtsId,
+          to: nodeRevId,
+          kind: { SwitchReverse: { switch_id: swId, circuit_id: `${swId}T`, speed: 'Medium' } },
+          length_feet: 120,
+        });
+
+        cp.switches.push({
+          id: swId,
+          name: swId,
+          speed: 'Medium',
+          motor_pin: null,
+          normal_sense_pin: null,
+          reverse_sense_pin: null,
+          island_circuit_id: `${swId}T`,
+        });
+        break;
+      }
+      case 'irj': {
+        const id = `IRJ_${Date.now().toString().slice(-4)}`;
+        this.project.graph.nodes[id] = {
+          id,
+          kind: { Irj: { id, circuit_left: '1T', circuit_right: '2T' } },
+          x: roundedX,
+          y: roundedY,
+        };
+        break;
+      }
+      case 'signal': {
+        const sigId = `${nextEvenSignal}Sab`;
+        const irjNodes = Object.keys(this.project.graph.nodes).filter((k) => k.includes('IRJ'));
+        const targetIrj = irjNodes[0] || null;
+
+        cp.signal_masts.push({
+          id: sigId,
+          name: sigId,
+          mast_type: 'TwoHead',
+          direction: 'Right',
+          governing_lever: `${nextEvenSignal}`,
+          irj_node_id: targetIrj,
+        });
+        break;
+      }
+      case 'bumper': {
+        const id = `BUMPER_${Date.now().toString().slice(-4)}`;
+        this.project.graph.nodes[id] = {
+          id,
+          kind: { Bumper: { id } },
+          x: roundedX,
+          y: roundedY,
+        };
+        break;
+      }
+      case 'boundary': {
+        const id = `B_${Date.now().toString().slice(-4)}`;
+        this.project.graph.nodes[id] = {
+          id,
+          kind: { Boundary: { boundary_id: id, direction: 'Right' } },
+          x: roundedX,
+          y: roundedY,
+        };
+        break;
+      }
+    }
+
+    this.runDrc();
   }
 }
 

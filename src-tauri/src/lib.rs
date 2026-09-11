@@ -15,25 +15,25 @@ fn load_demo_project() -> Result<ProjectFile, String> {
     let mut project = ProjectFile::new("Coast Division Demo", "Santa Cruz Branch");
     let mut cp = ControlPoint::new("CP_END_SIDING", "CP End of Siding", "Santa Cruz Branch");
 
-    // Add appliances (Southern Pacific / Western nomenclature)
-    cp.switches.push(Switch::new("SW1", "Switch 1"));
-    cp.track_circuits.push(TrackCircuit::new("1T1", "Island 1T1", true));
-    cp.track_circuits.push(TrackCircuit::new("1SA", "Approach West", false));
-    cp.track_circuits.push(TrackCircuit::new("1NA", "Main Exit East", false));
-    cp.track_circuits.push(TrackCircuit::new("2NA", "Siding Exit East", false));
+    // Add appliances (Southern Pacific / Western nomenclature, no noise words)
+    cp.switches.push(Switch::new("1", "1"));
+    cp.track_circuits.push(TrackCircuit::new("1T1", "1T1", true));
+    cp.track_circuits.push(TrackCircuit::new("1SA", "1SA", false));
+    cp.track_circuits.push(TrackCircuit::new("1NA", "1NA", false));
+    cp.track_circuits.push(TrackCircuit::new("2NA", "2NA", false));
 
     // 2Sab: 2-Head Southbound Mast (Top: Main 2Sa, Lower: Siding 2Sb)
-    let mut mast2sab = SignalMast::new("2Sab", "Signal 2Sab", MastType::TwoHead, Direction::Right);
+    let mut mast2sab = SignalMast::new("2Sab", "2Sab", MastType::TwoHead, Direction::Right);
     mast2sab.irj_node_id = Some("IRJ_WEST".to_string());
     cp.signal_masts.push(mast2sab);
 
     // 2Nab: 2-Head Northbound Mast on Main (Heads a & b)
-    let mut mast2nab = SignalMast::new("2Nab", "Signal 2Nab", MastType::TwoHead, Direction::Left);
+    let mut mast2nab = SignalMast::new("2Nab", "2Nab", MastType::TwoHead, Direction::Left);
     mast2nab.irj_node_id = Some("IRJ_EAST_MAIN".to_string());
     cp.signal_masts.push(mast2nab);
 
     // 2Nc: Dwarf Signal on Siding (Head c)
-    let mut mast2nc = SignalMast::new("2Nc", "Signal 2Nc", MastType::Dwarf, Direction::Left);
+    let mut mast2nc = SignalMast::new("2Nc", "2Nc", MastType::Dwarf, Direction::Left);
     mast2nc.irj_node_id = Some("IRJ_EAST_SIDING".to_string());
     cp.signal_masts.push(mast2nc);
 
@@ -81,7 +81,7 @@ fn load_demo_project() -> Result<ProjectFile, String> {
     });
     graph.add_node(TrackNode {
         id: "SW1_PTS".to_string(),
-        kind: NodeKind::SwitchPoints { switch_id: "SW1".to_string() },
+        kind: NodeKind::SwitchPoints { switch_id: "1".to_string() },
         x: 360.0,
         y: 180.0,
     });
@@ -137,7 +137,7 @@ fn load_demo_project() -> Result<ProjectFile, String> {
         id: "E_NORM".to_string(),
         from: "SW1_PTS".to_string(),
         to: "IRJ_EAST_MAIN".to_string(),
-        kind: EdgeKind::SwitchNormal { switch_id: "SW1".to_string(), circuit_id: "1T1".to_string() },
+        kind: EdgeKind::SwitchNormal { switch_id: "1".to_string(), circuit_id: "1T1".to_string() },
         length_feet: 120.0,
     });
     graph.add_edge(TrackEdge {
@@ -145,7 +145,7 @@ fn load_demo_project() -> Result<ProjectFile, String> {
         from: "SW1_PTS".to_string(),
         to: "IRJ_EAST_SIDING".to_string(),
         kind: EdgeKind::SwitchReverse {
-            switch_id: "SW1".to_string(),
+            switch_id: "1".to_string(),
             circuit_id: "1T1".to_string(),
             speed: SpeedClass::Medium,
         },

@@ -53,10 +53,16 @@
   </div>
 
   <div class="palette-group">
-    <div class="group-label">RAW APPLIANCES</div>
+    <div class="group-label">RAW APPLIANCES (CLICK TO ADD)</div>
     <div class="item-grid">
       {#each rawComponents as comp}
-        <div class="palette-item" title={comp.desc}>
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div
+          class="palette-item"
+          title={comp.desc}
+          onclick={() => studio.addAppliance(comp.id)}
+        >
           <div class="item-icon">{comp.icon}</div>
           <div class="item-label">{comp.name}</div>
         </div>

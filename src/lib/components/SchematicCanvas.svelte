@@ -94,29 +94,38 @@
       <rect x="-3000" y="-3000" width="6000" height="6000" fill="url(#grid-dots)" opacity="0.8" />
 
       {#if studio.project}
-        <!-- Control Point Boundary Box -->
-        <!-- Starts and ends precisely at the IRJ gap centers (x: 220 to 580), enclosing home signals -->
+        <!-- Dynamic Control Point Boundary Box -->
+        <!-- Automatically updates size and position when boundary IRJs move -->
         <rect
-          x="220"
-          y="135"
-          width="360"
-          height="185"
-          rx="6"
+          x={studio.cpBounds.x}
+          y={studio.cpBounds.y}
+          width={studio.cpBounds.width}
+          height={studio.cpBounds.height}
+          rx="8"
           fill="#10b981"
           fill-opacity="0.04"
           stroke="#10b981"
-          stroke-opacity="0.4"
+          stroke-opacity="0.35"
           stroke-width="1.5"
           stroke-dasharray="6 4"
         />
         {#if studio.layers.names}
-          <text x="230" y="152" fill="#10b981" font-size="11" font-weight="700" letter-spacing="0.5">
-            CP END OF SIDING [INTERLOCKING LIMITS]
+          <!-- Centered CP Name at Bottom of CP Box -->
+          <text
+            x={studio.cpBounds.centerX}
+            y={studio.cpBounds.bottomY - 10}
+            text-anchor="middle"
+            fill="#10b981"
+            font-size="11"
+            font-weight="700"
+            letter-spacing="0.5"
+          >
+            {studio.project.control_points[0]?.name.toUpperCase() || 'CP'}
           </text>
         {/if}
 
-        <!-- 1. Track Layer (Edges / Rails) -->
-        {#if studio.layers.track}
+        <!-- 1. Track Layer (Edges / Rails) - Bright or Dimmed -->
+        <g class="layer-group" class:dimmed={!studio.layers.track}>
           {#each studio.project.graph.edges as edge}
             {@const fromNode = studio.project.graph.nodes[edge.from]}
             {@const toNode = studio.project.graph.nodes[edge.to]}
@@ -148,36 +157,35 @@
                 filter={isHighlighted ? 'url(#route-glow)' : 'none'}
               />
 
-              <!-- Block Names in red overlaying track line without border -->
-              {#if studio.layers.electrical && circuitId && edge.length_feet >= 100}
-                <text
-                  x={midX}
-                  y={midY - 8}
-                  text-anchor="middle"
-                  fill="#ef4444"
-                  font-size="11"
-                  font-family="monospace"
-                  font-weight="700"
-                >
-                  {circuitId}
-                </text>
-              {/if}
+              <!-- Block Names in clean dark bubble with RED text -->
+              <g class="layer-group" class:dimmed={!studio.layers.electrical}>
+                {#if circuitId && edge.length_feet >= 100}
+                  <g transform="translate({midX}, {midY})">
+                    <rect x="-16" y="-8" width="32" height="16" rx="3" fill="#0f172a" stroke="#334155" stroke-width="1" />
+                    <text x="0" y="4" text-anchor="middle" fill="#ef4444" font-size="10" font-family="monospace" font-weight="700">
+                      {circuitId}
+                    </text>
+                  </g>
+                {/if}
+              </g>
 
-              <!-- Speed Overlay on Diverging Branches -->
-              {#if studio.layers.speeds && 'SwitchReverse' in edge.kind}
-                <text
-                  x={midX + 8}
-                  y={midY + 18}
-                  fill="#f59e0b"
-                  font-size="10"
-                  font-weight="bold"
-                >
-                  {edge.kind.SwitchReverse.speed.toUpperCase()} (30 MPH)
-                </text>
-              {/if}
+              <!-- Turnout Speed Overlay - Bright or Dimmed -->
+              <g class="layer-group" class:dimmed={!studio.layers.speeds}>
+                {#if 'SwitchReverse' in edge.kind}
+                  <text
+                    x={midX + 8}
+                    y={midY + 18}
+                    fill="#f59e0b"
+                    font-size="10"
+                    font-weight="bold"
+                  >
+                    {edge.kind.SwitchReverse.speed.toUpperCase()} (30 MPH)
+                  </text>
+                {/if}
+              </g>
             {/if}
           {/each}
-        {/if}
+        </g>
 
         <!-- 2. Nodes (IRJ, Switch Points, Boundaries) -->
         {#each Object.values(studio.project.graph.nodes) as node}
@@ -191,25 +199,25 @@
               <!-- CP Boundary Limit Marker -->
               <rect x="-8" y="-14" width="16" height="28" rx="2" fill="#3b82f6" fill-opacity="0.2" stroke="#60a5fa" stroke-width="1.5" />
               <line x1="0" y1="-14" x2="0" y2="14" stroke="#60a5fa" stroke-width="2" />
-              {#if studio.layers.names}
+              <g class="layer-group" class:dimmed={!studio.layers.names}>
                 <text x="0" y="24" text-anchor="middle" fill="#93c5fd" font-size="10" font-weight="600">
                   {node.kind.Boundary.boundary_id}
                 </text>
-              {/if}
+              </g>
             {:else if 'Irj' in node.kind}
               <!-- Insulated Rail Joint Symbol ][ -->
-              {#if studio.layers.electrical}
+              <g class="layer-group" class:dimmed={!studio.layers.electrical}>
                 <line x1="-3" y1="-10" x2="-3" y2="10" stroke="#ef4444" stroke-width="2.5" />
                 <line x1="3" y1="-10" x2="3" y2="10" stroke="#ef4444" stroke-width="2.5" />
-              {/if}
+              </g>
             {:else if 'SwitchPoints' in node.kind}
-              <!-- Switch Points Node -->
+              <!-- Switch Points Node: Clean identifier (e.g. "1") -->
               <circle cx="0" cy="0" r="5" fill="#f59e0b" stroke="#ffffff" stroke-width="1.5" />
-              {#if studio.layers.names}
-                <text x="0" y="-12" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="bold">
-                  SW1 (ODD)
+              <g class="layer-group" class:dimmed={!studio.layers.names}>
+                <text x="0" y="-12" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="bold">
+                  {node.kind.SwitchPoints.switch_id}
                 </text>
-              {/if}
+              </g>
             {:else if 'Bumper' in node.kind}
               <rect x="-4" y="-8" width="8" height="16" fill="#ef4444" stroke="#ffffff" stroke-width="1" />
             {/if}
@@ -220,8 +228,8 @@
           </g>
         {/each}
 
-        <!-- 3. Signal Layer (Engineer Cab Perspective: Base at IRJ, Mast arm, Horizontal Heads) -->
-        {#if studio.layers.signals}
+        <!-- 3. Signal Layer (Horizontal Heads with Rounded Border Capsule) -->
+        <g class="layer-group" class:dimmed={!studio.layers.signals}>
           {#each studio.project.control_points as cp}
             {#each cp.signal_masts as mast}
               {@const irjNode = mast.irj_node_id ? studio.project.graph.nodes[mast.irj_node_id] : null}
@@ -229,57 +237,65 @@
                 {@const isRight = mast.direction === 'Right'}
                 <!--
                   Engineer Perspective:
-                  - Southbound (traffic right): Engineer looking South sees:
-                    Base at IRJ | -> Mast arm extends right -- -> Heads horizontal oo: |--oo
-                    Stands below track on engineer's right.
-                  - Northbound (traffic left): Engineer looking North sees:
-                    Heads horizontal oo <- Mast arm extends left -- <- Base at IRJ |: oo--|
-                    Stands above track on engineer's right.
+                  - Southbound (traffic right): Stands below track on engineer's right:
+                    Base at IRJ | -> Mast arm extends right -- -> Capsule with horizontal heads oo: |--oo
+                  - Northbound (traffic left): Stands above track on engineer's right:
+                    Capsule with horizontal heads oo <- Mast arm extends left -- <- Base at IRJ |: oo--|
                 -->
                 <g class="signal-mast-group">
                   {#if isRight}
                     <!-- 2Sab: Below rail, base at IRJ, arm extending right, heads horizontal: |--oo -->
                     <g transform="translate({irjNode.x}, {irjNode.y + 12})">
                       <!-- Base | aligned to IRJ center gap -->
-                      <line x1="0" y1="0" x2="0" y2="14" stroke="#e2e8f0" stroke-width="2.5" stroke-linecap="round" />
+                      <line x1="0" y1="0" x2="0" y2="16" stroke="#e2e8f0" stroke-width="2.5" stroke-linecap="round" />
                       <!-- Horizontal arm extending right -->
-                      <line x1="0" y1="12" x2="16" y2="12" stroke="#cbd5e1" stroke-width="2" />
-                      <!-- Heads arranged horizontally: Head 2Sb (left) and 2Sa (right) -->
-                      <circle cx="20" cy="12" r="3.5" fill="#ef4444" stroke="#0f172a" stroke-width="1" />
-                      <circle cx="28" cy="12" r="3.5" fill="#22c55e" stroke="#0f172a" stroke-width="1" />
-                      {#if studio.layers.names}
-                        <text x="24" y="26" text-anchor="middle" fill="#f8fafc" font-size="10" font-weight="700">
+                      <line x1="0" y1="14" x2="14" y2="14" stroke="#cbd5e1" stroke-width="2" />
+
+                      <!-- Signal Body Capsule with white/silver border -->
+                      <rect x="14" y="6" width="24" height="16" rx="4" fill="#0f172a" stroke="#e2e8f0" stroke-width="1.2" />
+                      <!-- Horizontal heads: 2Sb (left) and 2Sa (right) -->
+                      <circle cx="20" cy="14" r="3.5" fill="#ef4444" stroke="#000000" stroke-width="0.8" />
+                      <circle cx="30" cy="14" r="3.5" fill="#22c55e" stroke="#000000" stroke-width="0.8" />
+
+                      <!-- Signal Name cleanly below capsule, no overlap -->
+                      <g class="layer-group" class:dimmed={!studio.layers.names}>
+                        <text x="26" y="36" text-anchor="middle" fill="#f8fafc" font-size="10" font-weight="700">
                           {mast.name}
                         </text>
-                      {/if}
+                      </g>
                     </g>
                   {:else}
                     <!-- 2Nab / 2Nc: Above rail, heads horizontal, arm extending left, base at IRJ: oo--| -->
                     <g transform="translate({irjNode.x}, {irjNode.y - 12})">
                       <!-- Base | aligned to IRJ center gap -->
-                      <line x1="0" y1="0" x2="0" y2="-14" stroke="#e2e8f0" stroke-width="2.5" stroke-linecap="round" />
+                      <line x1="0" y1="0" x2="0" y2="-16" stroke="#e2e8f0" stroke-width="2.5" stroke-linecap="round" />
                       <!-- Horizontal arm extending left -->
-                      <line x1="0" y1="-12" x2="-16" y2="-12" stroke="#cbd5e1" stroke-width="2" />
-                      <!-- Heads arranged horizontally: Head 2Nb and 2Na -->
+                      <line x1="0" y1="-14" x2="-14" y2="-14" stroke="#cbd5e1" stroke-width="2" />
+
+                      <!-- Signal Body Capsule with white/silver border -->
                       {#if mast.mast_type === 'TwoHead'}
-                        <circle cx="-28" cy="-12" r="3.5" fill="#22c55e" stroke="#0f172a" stroke-width="1" />
-                        <circle cx="-20" cy="-12" r="3.5" fill="#ef4444" stroke="#0f172a" stroke-width="1" />
+                        <rect x="-38" y="-22" width="24" height="16" rx="4" fill="#0f172a" stroke="#e2e8f0" stroke-width="1.2" />
+                        <circle cx="-32" cy="-14" r="3.5" fill="#22c55e" stroke="#000000" stroke-width="0.8" />
+                        <circle cx="-22" cy="-14" r="3.5" fill="#ef4444" stroke="#000000" stroke-width="0.8" />
                       {:else}
-                        <!-- Dwarf signal (single head 2Nc) -->
-                        <circle cx="-22" cy="-12" r="3.5" fill="#ef4444" stroke="#0f172a" stroke-width="1" />
+                        <!-- Dwarf signal (single head) -->
+                        <rect x="-26" y="-22" width="16" height="16" rx="4" fill="#0f172a" stroke="#e2e8f0" stroke-width="1.2" />
+                        <circle cx="-18" cy="-14" r="3.5" fill="#ef4444" stroke="#000000" stroke-width="0.8" />
                       {/if}
-                      {#if studio.layers.names}
-                        <text x="-24" y="-22" text-anchor="middle" fill="#f8fafc" font-size="10" font-weight="700">
+
+                      <!-- Signal Name cleanly above capsule, no overlap -->
+                      <g class="layer-group" class:dimmed={!studio.layers.names}>
+                        <text x={mast.mast_type === 'TwoHead' ? -26 : -18} y="-28" text-anchor="middle" fill="#f8fafc" font-size="10" font-weight="700">
                           {mast.name}
                         </text>
-                      {/if}
+                      </g>
                     </g>
                   {/if}
                 </g>
               {/if}
             {/each}
           {/each}
-        {/if}
+        </g>
       {/if}
     </g>
   </svg>
