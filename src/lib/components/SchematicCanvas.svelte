@@ -95,23 +95,23 @@
 
       {#if studio.project}
         <!-- Control Point Boundary Box -->
-        <!-- Extends to slightly less than half of boundary IRJs (x: 222 to 578) -->
+        <!-- Starts and ends precisely at the IRJ gap centers (x: 220 to 580), enclosing home signals -->
         <rect
-          x="222"
-          y="130"
-          width="356"
-          height="190"
-          rx="8"
+          x="220"
+          y="135"
+          width="360"
+          height="185"
+          rx="6"
           fill="#10b981"
           fill-opacity="0.04"
           stroke="#10b981"
-          stroke-opacity="0.35"
+          stroke-opacity="0.4"
           stroke-width="1.5"
-          stroke-dasharray="5 5"
+          stroke-dasharray="6 4"
         />
         {#if studio.layers.names}
-          <text x="232" y="148" fill="#10b981" font-size="11" font-weight="700" letter-spacing="0.5">
-            CP END OF SIDING [VERIFIED]
+          <text x="230" y="152" fill="#10b981" font-size="11" font-weight="700" letter-spacing="0.5">
+            CP END OF SIDING [INTERLOCKING LIMITS]
           </text>
         {/if}
 
@@ -148,21 +148,26 @@
                 filter={isHighlighted ? 'url(#route-glow)' : 'none'}
               />
 
-              <!-- Block Names directly overlaying track line -->
+              <!-- Block Names in red overlaying track line without border -->
               {#if studio.layers.electrical && circuitId && edge.length_feet >= 100}
-                <g transform="translate({midX}, {midY})">
-                  <rect x="-16" y="-7" width="32" height="14" rx="2" fill="#0f172a" stroke="#334155" stroke-width="1" />
-                  <text x="0" y="3.5" text-anchor="middle" fill="#38bdf8" font-size="9" font-family="monospace" font-weight="600">
-                    {circuitId}
-                  </text>
-                </g>
+                <text
+                  x={midX}
+                  y={midY - 8}
+                  text-anchor="middle"
+                  fill="#ef4444"
+                  font-size="11"
+                  font-family="monospace"
+                  font-weight="700"
+                >
+                  {circuitId}
+                </text>
               {/if}
 
               <!-- Speed Overlay on Diverging Branches -->
               {#if studio.layers.speeds && 'SwitchReverse' in edge.kind}
                 <text
                   x={midX + 8}
-                  y={midY - 8}
+                  y={midY + 18}
                   fill="#f59e0b"
                   font-size="10"
                   font-weight="bold"
@@ -215,7 +220,7 @@
           </g>
         {/each}
 
-        <!-- 3. Signal Layer (Wayside Signaling with Engineer Cab Perspective) -->
+        <!-- 3. Signal Layer (Engineer Cab Perspective: Base at IRJ, Mast arm, Horizontal Heads) -->
         {#if studio.layers.signals}
           {#each studio.project.control_points as cp}
             {#each cp.signal_masts as mast}
@@ -223,46 +228,48 @@
               {#if irjNode}
                 {@const isRight = mast.direction === 'Right'}
                 <!--
-                  Engineer sitting in right-hand seat:
-                  - Southbound (traffic right): signal sits BELOW track.
-                    Base | aligns with IRJ. Arm - extends LEFT towards approaching train. Heads oo face left: |-oo
-                  - Northbound (traffic left): signal sits ABOVE track.
-                    Base | aligns with IRJ. Arm - extends RIGHT towards approaching train. Heads oo face right: oo-|
+                  Engineer Perspective:
+                  - Southbound (traffic right): Engineer looking South sees:
+                    Base at IRJ | -> Mast arm extends right -- -> Heads horizontal oo: |--oo
+                    Stands below track on engineer's right.
+                  - Northbound (traffic left): Engineer looking North sees:
+                    Heads horizontal oo <- Mast arm extends left -- <- Base at IRJ |: oo--|
+                    Stands above track on engineer's right.
                 -->
                 <g class="signal-mast-group">
                   {#if isRight}
-                    <!-- 2Sab: Below rail, base at IRJ, arm extending left -->
-                    <g transform="translate({irjNode.x}, {irjNode.y + 14})">
-                      <!-- Mast Base | aligned to IRJ -->
-                      <line x1="0" y1="0" x2="0" y2="16" stroke="#e2e8f0" stroke-width="3" stroke-linecap="round" />
-                      <!-- Horizontal arm extending left -->
-                      <line x1="0" y1="8" x2="-18" y2="8" stroke="#cbd5e1" stroke-width="2" />
-                      <!-- Heads facing oncoming train (facing Left) -->
-                      <circle cx="-22" cy="4" r="3.5" fill="#22c55e" stroke="#0f172a" stroke-width="1" />
-                      <circle cx="-22" cy="12" r="3.5" fill="#ef4444" stroke="#0f172a" stroke-width="1" />
+                    <!-- 2Sab: Below rail, base at IRJ, arm extending right, heads horizontal: |--oo -->
+                    <g transform="translate({irjNode.x}, {irjNode.y + 12})">
+                      <!-- Base | aligned to IRJ center gap -->
+                      <line x1="0" y1="0" x2="0" y2="14" stroke="#e2e8f0" stroke-width="2.5" stroke-linecap="round" />
+                      <!-- Horizontal arm extending right -->
+                      <line x1="0" y1="12" x2="16" y2="12" stroke="#cbd5e1" stroke-width="2" />
+                      <!-- Heads arranged horizontally: Head 2Sb (left) and 2Sa (right) -->
+                      <circle cx="20" cy="12" r="3.5" fill="#ef4444" stroke="#0f172a" stroke-width="1" />
+                      <circle cx="28" cy="12" r="3.5" fill="#22c55e" stroke="#0f172a" stroke-width="1" />
                       {#if studio.layers.names}
-                        <text x="-28" y="11" text-anchor="end" fill="#f8fafc" font-size="11" font-weight="700">
+                        <text x="24" y="26" text-anchor="middle" fill="#f8fafc" font-size="10" font-weight="700">
                           {mast.name}
                         </text>
                       {/if}
                     </g>
                   {:else}
-                    <!-- 2Nab / 2Nc: Above rail, base at IRJ, arm extending right -->
-                    <g transform="translate({irjNode.x}, {irjNode.y - 14})">
-                      <!-- Mast Base | aligned to IRJ -->
-                      <line x1="0" y1="0" x2="0" y2="-16" stroke="#e2e8f0" stroke-width="3" stroke-linecap="round" />
-                      <!-- Horizontal arm extending right -->
-                      <line x1="0" y1="-8" x2="18" y2="-8" stroke="#cbd5e1" stroke-width="2" />
-                      <!-- Heads facing oncoming train (facing Right) -->
+                    <!-- 2Nab / 2Nc: Above rail, heads horizontal, arm extending left, base at IRJ: oo--| -->
+                    <g transform="translate({irjNode.x}, {irjNode.y - 12})">
+                      <!-- Base | aligned to IRJ center gap -->
+                      <line x1="0" y1="0" x2="0" y2="-14" stroke="#e2e8f0" stroke-width="2.5" stroke-linecap="round" />
+                      <!-- Horizontal arm extending left -->
+                      <line x1="0" y1="-12" x2="-16" y2="-12" stroke="#cbd5e1" stroke-width="2" />
+                      <!-- Heads arranged horizontally: Head 2Nb and 2Na -->
                       {#if mast.mast_type === 'TwoHead'}
-                        <circle cx="22" cy="-12" r="3.5" fill="#22c55e" stroke="#0f172a" stroke-width="1" />
-                        <circle cx="22" cy="-4" r="3.5" fill="#ef4444" stroke="#0f172a" stroke-width="1" />
+                        <circle cx="-28" cy="-12" r="3.5" fill="#22c55e" stroke="#0f172a" stroke-width="1" />
+                        <circle cx="-20" cy="-12" r="3.5" fill="#ef4444" stroke="#0f172a" stroke-width="1" />
                       {:else}
-                        <!-- Dwarf signal (single head c) -->
-                        <circle cx="22" cy="-8" r="3.5" fill="#ef4444" stroke="#0f172a" stroke-width="1" />
+                        <!-- Dwarf signal (single head 2Nc) -->
+                        <circle cx="-22" cy="-12" r="3.5" fill="#ef4444" stroke="#0f172a" stroke-width="1" />
                       {/if}
                       {#if studio.layers.names}
-                        <text x="28" y="-5" text-anchor="start" fill="#f8fafc" font-size="11" font-weight="700">
+                        <text x="-24" y="-22" text-anchor="middle" fill="#f8fafc" font-size="10" font-weight="700">
                           {mast.name}
                         </text>
                       {/if}
