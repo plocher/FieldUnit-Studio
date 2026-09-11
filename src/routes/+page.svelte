@@ -35,6 +35,11 @@
       case 'n':
         studio.toggleLayer('names');
         break;
+      case 'delete':
+      case 'backspace':
+      case 'x':
+        studio.deleteSelected();
+        break;
       case '0':
         if (event.metaKey || event.ctrlKey) {
           event.preventDefault();

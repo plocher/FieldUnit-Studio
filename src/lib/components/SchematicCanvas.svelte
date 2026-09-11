@@ -7,6 +7,11 @@
   let panStartX = $state(0);
   let panStartY = $state(0);
 
+  // Marquee Bounding Box Selection
+  let isMarquee = $state(false);
+  let marqueeStart = $state({ x: 0, y: 0 });
+  let marqueeCurrent = $state({ x: 0, y: 0 });
+
   let draggingNodeId = $state<string | null>(null);
   let dragOffset = $state({ x: 0, y: 0 });
 
@@ -41,22 +46,46 @@
   }
 
   function handleMouseDown(event: MouseEvent) {
-    if (event.button === 1 || (event.button === 0 && (event.target as HTMLElement).tagName === 'svg')) {
+    // If clicking on a node group, node drag handler takes over
+    if ((event.target as HTMLElement).closest('.node-group')) {
+      return;
+    }
+
+    const rect = svgElement?.getBoundingClientRect();
+    if (!rect) return;
+    const canvasX = (event.clientX - rect.left - studio.panX) / studio.zoom;
+    const canvasY = (event.clientY - rect.top - studio.panY) / studio.zoom;
+
+    // Shift + Left Click on background: Start Marquee Selection Box
+    if (event.shiftKey && event.button === 0) {
+      isMarquee = true;
+      marqueeStart = { x: canvasX, y: canvasY };
+      marqueeCurrent = { x: canvasX, y: canvasY };
+      return;
+    }
+
+    // Normal Left Click or Middle Click on background: Pan Canvas
+    if (event.button === 0 || event.button === 1) {
       isPanning = true;
       panStartX = event.clientX - studio.panX;
       panStartY = event.clientY - studio.panY;
+      studio.clearSelection();
     }
   }
 
   function handleMouseMove(event: MouseEvent) {
+    const rect = svgElement?.getBoundingClientRect();
+    if (!rect) return;
+
     if (isPanning) {
       studio.panX = event.clientX - panStartX;
       studio.panY = event.clientY - panStartY;
+    } else if (isMarquee) {
+      const canvasX = (event.clientX - rect.left - studio.panX) / studio.zoom;
+      const canvasY = (event.clientY - rect.top - studio.panY) / studio.zoom;
+      marqueeCurrent = { x: canvasX, y: canvasY };
     } else if (draggingNodeId && studio.project) {
-      const rect = svgElement?.getBoundingClientRect();
-      if (!rect) return;
-
-      // Calculate continuous smooth auto-pan velocity near edges
+      // Auto-pan viewport when dragging near edges
       const margin = 60;
       const speed = 12;
       let vx = 0;
@@ -88,17 +117,23 @@
 
   function handleMouseUp() {
     stopAutoPanLoop();
-    if (draggingNodeId) {
+
+    if (isMarquee) {
+      studio.selectNodesInBox(marqueeStart.x, marqueeStart.y, marqueeCurrent.x, marqueeCurrent.y);
+      isMarquee = false;
+    } else if (draggingNodeId) {
       studio.snapAndMerge(draggingNodeId);
+      draggingNodeId = null;
     }
+
     isPanning = false;
-    draggingNodeId = null;
   }
 
   function startNodeDrag(event: MouseEvent, node: TrackNode) {
     event.stopPropagation();
     draggingNodeId = node.id;
-    studio.selectedNodeId = node.id;
+    studio.selectNode(node.id, event.shiftKey);
+
     const rect = svgElement?.getBoundingClientRect();
     if (!rect) return;
     const mouseX = (event.clientX - rect.left - studio.panX) / studio.zoom;
@@ -267,7 +302,8 @@
               <rect x="-4" y="-8" width="8" height="16" fill="#ef4444" stroke="#ffffff" stroke-width="1" />
             {/if}
 
-            {#if studio.selectedNodeId === node.id}
+            <!-- Selection Indicator for single or multi-selected nodes -->
+            {#if studio.selectedNodeIds.includes(node.id) || studio.selectedNodeId === node.id}
               <circle cx="0" cy="0" r="14" fill="none" stroke="#38bdf8" stroke-width="2" stroke-dasharray="3 3" />
             {/if}
           </g>
@@ -334,6 +370,19 @@
             {/each}
           {/each}
         </g>
+        <!-- Marquee Selection Rectangle -->
+        {#if isMarquee}
+          <rect
+            x={Math.min(marqueeStart.x, marqueeCurrent.x)}
+            y={Math.min(marqueeStart.y, marqueeCurrent.y)}
+            width={Math.abs(marqueeCurrent.x - marqueeStart.x)}
+            height={Math.abs(marqueeCurrent.y - marqueeStart.y)}
+            fill="rgba(56, 189, 248, 0.12)"
+            stroke="#38bdf8"
+            stroke-width="1.5"
+            stroke-dasharray="4 4"
+          />
+        {/if}
       {/if}
     </g>
   </svg>

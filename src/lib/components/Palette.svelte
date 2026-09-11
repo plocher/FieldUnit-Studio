@@ -2,14 +2,14 @@
   import { studio } from '$lib/state.svelte';
 
   const rawComponents = [
-    { id: 'turnout', name: 'Turnout (Switch)', icon: '⑂', desc: 'Odd AAR switch appliance' },
-    { id: 'crossover', name: 'Universal Crossover', icon: '⤧', desc: 'Paired switch machines' },
-    { id: 'track', name: 'Track Net', icon: '—', desc: 'Auto-routed track line' },
-    { id: 'irj', name: 'Insulated Joint (IRJ)', icon: '][', desc: 'Electrical block gap' },
-    { id: 'sensor', name: 'Optical Sensor', icon: '(d)', desc: 'Frog fouling coverage' },
-    { id: 'signal', name: 'Signal Mast', icon: '⚑', desc: 'Wayside governing mast' },
-    { id: 'boundary', name: 'CP Boundary', icon: '⮥', desc: 'Interlocking limit flag' },
-    { id: 'bumper', name: 'Track Bumper', icon: '⫿', desc: 'Stub buffer stop' },
+    { id: 'turnout', name: 'Turnout', type: 'turnout', desc: 'Odd AAR switch appliance' },
+    { id: 'crossover', name: 'Crossover', type: 'crossover', desc: 'Paired switch machines' },
+    { id: 'track', name: 'Track Net', type: 'track', desc: 'Auto-routed track line' },
+    { id: 'irj', name: 'IRJ Joint', type: 'irj', desc: 'Insulated rail gap' },
+    { id: 'sensor', name: 'Optical Sensor', type: 'sensor', desc: 'Frog fouling coverage' },
+    { id: 'signal', name: 'Signal Mast', type: 'signal', desc: 'Wayside governing mast' },
+    { id: 'boundary', name: 'CP Boundary', type: 'boundary', desc: 'Interlocking limit marker' },
+    { id: 'bumper', name: 'Bumper', type: 'bumper', desc: 'Buffer stop' },
   ];
 
   const recipes = [
@@ -63,7 +63,54 @@
           title={comp.desc}
           onclick={() => studio.addAppliance(comp.id)}
         >
-          <div class="item-icon">{comp.icon}</div>
+          <div class="item-icon-box">
+            {#if comp.type === 'turnout'}
+              <svg width="32" height="22" viewBox="0 0 32 22">
+                <line x1="2" y1="11" x2="30" y2="11" stroke="#94a3b8" stroke-width="2.5" />
+                <line x1="12" y1="11" x2="26" y2="3" stroke="#94a3b8" stroke-width="2.5" />
+                <circle cx="12" cy="11" r="3" fill="#f59e0b" stroke="#ffffff" stroke-width="1" />
+              </svg>
+            {:else if comp.type === 'signal'}
+              <svg width="32" height="22" viewBox="0 0 32 22">
+                <line x1="4" y1="3" x2="4" y2="19" stroke="#cbd5e1" stroke-width="1.8" />
+                <line x1="4" y1="11" x2="14" y2="11" stroke="#cbd5e1" stroke-width="1.8" />
+                <rect x="14" y="5" width="16" height="12" rx="3" fill="#0f172a" stroke="#e2e8f0" stroke-width="1" />
+                <circle cx="18" cy="11" r="2.5" fill="#ef4444" />
+                <circle cx="25" cy="11" r="2.5" fill="#22c55e" />
+              </svg>
+            {:else if comp.type === 'irj'}
+              <svg width="32" height="22" viewBox="0 0 32 22">
+                <line x1="2" y1="11" x2="30" y2="11" stroke="#94a3b8" stroke-width="2.5" />
+                <line x1="13" y1="4" x2="13" y2="18" stroke="#ef4444" stroke-width="2" />
+                <line x1="19" y1="4" x2="19" y2="18" stroke="#ef4444" stroke-width="2" />
+              </svg>
+            {:else if comp.type === 'boundary'}
+              <svg width="32" height="22" viewBox="0 0 32 22">
+                <rect x="9" y="3" width="14" height="16" rx="2" fill="#3b82f6" fill-opacity="0.3" stroke="#60a5fa" stroke-width="1.2" />
+                <line x1="16" y1="2" x2="16" y2="20" stroke="#60a5fa" stroke-width="1.8" />
+              </svg>
+            {:else if comp.type === 'bumper'}
+              <svg width="32" height="22" viewBox="0 0 32 22">
+                <line x1="2" y1="11" x2="22" y2="11" stroke="#94a3b8" stroke-width="2.5" />
+                <rect x="22" y="4" width="4" height="14" fill="#ef4444" stroke="#ffffff" stroke-width="1" />
+              </svg>
+            {:else if comp.type === 'crossover'}
+              <svg width="32" height="22" viewBox="0 0 32 22">
+                <line x1="2" y1="5" x2="30" y2="5" stroke="#94a3b8" stroke-width="2" />
+                <line x1="2" y1="17" x2="30" y2="17" stroke="#94a3b8" stroke-width="2" />
+                <line x1="8" y1="17" x2="24" y2="5" stroke="#94a3b8" stroke-width="2" />
+              </svg>
+            {:else if comp.type === 'sensor'}
+              <svg width="32" height="22" viewBox="0 0 32 22">
+                <circle cx="16" cy="11" r="5" fill="#f59e0b" fill-opacity="0.3" stroke="#f59e0b" stroke-width="1.5" />
+                <text x="16" y="14" text-anchor="middle" fill="#fbbf24" font-size="8" font-family="monospace">d</text>
+              </svg>
+            {:else}
+              <svg width="32" height="22" viewBox="0 0 32 22">
+                <line x1="2" y1="11" x2="30" y2="11" stroke="#94a3b8" stroke-width="3" />
+              </svg>
+            {/if}
+          </div>
           <div class="item-label">{comp.name}</div>
         </div>
       {/each}
@@ -204,12 +251,6 @@
   .palette-item:hover {
     background: #334155;
     border-color: #0284c7;
-  }
-
-  .item-icon {
-    font-size: 16px;
-    color: #38bdf8;
-    margin-bottom: 4px;
   }
 
   .item-label {

@@ -32,6 +32,9 @@
             <span class="prop-label">Position Y:</span>
             <span class="prop-val">{node.y}</span>
           </div>
+          <button class="delete-btn" onclick={() => studio.deleteSelected()}>
+            Delete Selected ({studio.selectedNodeIds.length || 1})
+          </button>
         </div>
 
         {#if 'SwitchPoints' in node.kind}
@@ -207,5 +210,24 @@
     padding: 2px 6px;
     font-size: 11px;
     width: 90px;
+  }
+
+  .delete-btn {
+    width: 100%;
+    margin-top: 8px;
+    background: rgba(220, 38, 38, 0.2);
+    border: 1px solid #ef4444;
+    color: #fca5a5;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .delete-btn:hover {
+    background: #dc2626;
+    color: #ffffff;
   }
 </style>

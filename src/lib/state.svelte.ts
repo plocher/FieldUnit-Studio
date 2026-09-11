@@ -34,6 +34,7 @@ export class StudioState {
 
   // Selection
   selectedNodeId = $state<string | null>(null);
+  selectedNodeIds = $state<string[]>([]);
   selectedRouteId = $state<string | null>(null);
   selectedApplianceId = $state<string | null>(null);
 
@@ -53,31 +54,41 @@ export class StudioState {
       : null
   );
 
-  // Computed: Dynamic CP Bounding Box based on boundary IRJs and contained nodes
+  // Computed: Dynamic CP Bounding Box across ALL appliances in the plant
   cpBounds = $derived.by(() => {
     if (!this.project) {
-      return { x: 220, y: 135, width: 360, height: 185, centerX: 400, bottomY: 320 };
+      return { x: 200, y: 130, width: 400, height: 180, centerX: 400, bottomY: 310 };
     }
 
-    const irjWest = this.project.graph.nodes['IRJ_WEST'];
-    const irjEastMain = this.project.graph.nodes['IRJ_EAST_MAIN'];
-    const irjEastSiding = this.project.graph.nodes['IRJ_EAST_SIDING'];
+    // Include all internal appliances and joints belonging to the interlocking limits
+    const cpNodes = Object.values(this.project.graph.nodes).filter((node) => {
+      return 'SwitchPoints' in node.kind ||
+             'Irj' in node.kind ||
+             'Junction' in node.kind ||
+             'Bumper' in node.kind;
+    });
 
-    const leftX = irjWest ? irjWest.x : 220;
-    const rightX = Math.max(irjEastMain ? irjEastMain.x : 580, irjEastSiding ? irjEastSiding.x : 580);
+    if (cpNodes.length === 0) {
+      return { x: 200, y: 130, width: 400, height: 180, centerX: 400, bottomY: 310 };
+    }
 
-    const minY = Math.min(irjWest ? irjWest.y : 180, irjEastMain ? irjEastMain.y : 180) - 45;
-    const maxY = Math.max(irjWest ? irjWest.y : 180, irjEastSiding ? irjEastSiding.y : 280) + 45;
+    const xs = cpNodes.map((n) => n.x);
+    const ys = cpNodes.map((n) => n.y);
 
-    const width = Math.max(rightX - leftX, 100);
-    const height = Math.max(maxY - minY, 80);
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys) - 45;
+    const maxY = Math.max(...ys) + 45;
+
+    const width = Math.max(maxX - minX, 120);
+    const height = Math.max(maxY - minY, 90);
 
     return {
-      x: leftX,
+      x: minX,
       y: minY,
       width,
       height,
-      centerX: leftX + width / 2,
+      centerX: minX + width / 2,
       bottomY: minY + height,
     };
   });
@@ -86,6 +97,8 @@ export class StudioState {
     try {
       const demo = await invoke<ProjectFile>('load_demo_project');
       this.project = demo;
+      this.selectedNodeId = null;
+      this.selectedNodeIds = [];
       await this.runDrc();
     } catch (err) {
       console.error('Failed to load demo project:', err);
@@ -135,7 +148,44 @@ export class StudioState {
     this.panY = 0;
   }
 
-  // Node position update: moves switch points and all its connected legs as a cluster
+  // Selection handlers
+  selectNode(nodeId: string, isShift: boolean) {
+    if (isShift) {
+      if (this.selectedNodeIds.includes(nodeId)) {
+        this.selectedNodeIds = this.selectedNodeIds.filter((id) => id !== nodeId);
+      } else {
+        this.selectedNodeIds = [...this.selectedNodeIds, nodeId];
+      }
+      this.selectedNodeId = this.selectedNodeIds[this.selectedNodeIds.length - 1] || null;
+    } else {
+      this.selectedNodeId = nodeId;
+      this.selectedNodeIds = [nodeId];
+    }
+  }
+
+  selectNodesInBox(x1: number, y1: number, x2: number, y2: number) {
+    if (!this.project) return;
+    const minX = Math.min(x1, x2);
+    const maxX = Math.max(x1, x2);
+    const minY = Math.min(y1, y2);
+    const maxY = Math.max(y1, y2);
+
+    const matches: string[] = [];
+    for (const [id, node] of Object.entries(this.project.graph.nodes)) {
+      if (node.x >= minX && node.x <= maxX && node.y >= minY && node.y <= maxY) {
+        matches.push(id);
+      }
+    }
+    this.selectedNodeIds = matches;
+    this.selectedNodeId = matches[0] || null;
+  }
+
+  clearSelection() {
+    this.selectedNodeId = null;
+    this.selectedNodeIds = [];
+  }
+
+  // Move node(s): moves all selected nodes together, or moves switch points cluster
   updateNodePosition(nodeId: string, newX: number, newY: number) {
     if (!this.project || !this.project.graph.nodes[nodeId]) return;
 
@@ -144,6 +194,18 @@ export class StudioState {
     const snapY = Math.round(newY / 10) * 10;
     const dx = snapX - node.x;
     const dy = snapY - node.y;
+
+    // If part of multi-selection, move all selected nodes together
+    if (this.selectedNodeIds.length > 1 && this.selectedNodeIds.includes(nodeId)) {
+      for (const id of this.selectedNodeIds) {
+        const n = this.project.graph.nodes[id];
+        if (n) {
+          n.x += dx;
+          n.y += dy;
+        }
+      }
+      return;
+    }
 
     node.x = snapX;
     node.y = snapY;
@@ -161,6 +223,40 @@ export class StudioState {
         }
       }
     }
+  }
+
+  // Delete selected nodes and clean up connected edges and appliances
+  deleteSelected() {
+    if (!this.project) return;
+    const idsToDelete = this.selectedNodeIds.length > 0
+      ? [...this.selectedNodeIds]
+      : this.selectedNodeId
+      ? [this.selectedNodeId]
+      : [];
+
+    if (idsToDelete.length === 0) return;
+    const cp = this.project.control_points[0];
+
+    for (const id of idsToDelete) {
+      const node = this.project.graph.nodes[id];
+      if (node && 'SwitchPoints' in node.kind) {
+        const swId = node.kind.SwitchPoints.switch_id;
+        cp.switches = cp.switches.filter((s) => s.id !== swId);
+      }
+      if (node && 'Irj' in node.kind) {
+        cp.signal_masts = cp.signal_masts.filter((m) => m.irj_node_id !== id);
+      }
+      delete this.project.graph.nodes[id];
+    }
+
+    // Remove any edges connected to deleted nodes
+    this.project.graph.edges = this.project.graph.edges.filter(
+      (e) => !idsToDelete.includes(e.from) && !idsToDelete.includes(e.to)
+    );
+
+    this.clearSelection();
+    this.runDrc();
+    this.synthesizeRoutes();
   }
 
   // Universal Node Snapping and Wire Splitting
