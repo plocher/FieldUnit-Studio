@@ -507,6 +507,10 @@ export class StudioState {
     // 1. Check if dropped directly onto an existing node (snap to node)
     for (const [targetId, targetNode] of Object.entries(this.project.graph.nodes)) {
       if (targetId === draggedId) continue;
+
+      // Safety check: Never merge two distinct IRJ joints together
+      if ('Irj' in draggedNode.kind && 'Irj' in targetNode.kind) continue;
+
       const dist = Math.hypot(draggedNode.x - targetNode.x, draggedNode.y - targetNode.y);
       if (dist <= 26) {
         // Case A: Dragging SwitchPoints onto a Boundary (extend mainline/siding)

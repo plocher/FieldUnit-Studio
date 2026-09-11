@@ -134,17 +134,12 @@
       return;
     }
 
-    // 4. If clicking on a track line, select the detection block and allow dragging the block's nodes
+    // 4. If clicking on a track line, select the detection block for inspection
     const trackGroup = (event.target as HTMLElement).closest('.clickable-track');
     if (trackGroup && event.button === 0) {
       const cId = trackGroup.getAttribute('data-circuit');
       if (cId) {
         studio.selectCircuit(cId);
-        if (studio.selectedNodeId && studio.project?.graph.nodes[studio.selectedNodeId]) {
-          const leadNode = studio.project.graph.nodes[studio.selectedNodeId];
-          draggingNodeId = studio.selectedNodeId;
-          dragOffset = { x: canvasX - leadNode.x, y: canvasY - leadNode.y };
-        }
         return;
       }
     }
