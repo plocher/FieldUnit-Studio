@@ -336,9 +336,16 @@ export class StudioState {
     this.saveSnapshot();
 
     const edge = this.project.graph.edges[edgeIndex];
-    const snapX = Math.round(x / 10) * 10;
+    let snapX = Math.round(x / 10) * 10;
     const snapY = Math.round(y / 10) * 10;
-    const shiftDistance = 120;
+    const shiftDistance = 140;
+
+    // Enforce minimum distance from any existing IRJ node (at least 60px) to prevent crowded joints
+    for (const node of Object.values(this.project.graph.nodes)) {
+      if ('Irj' in node.kind && Math.abs(snapX - node.x) < 60) {
+        snapX = node.x + 70;
+      }
+    }
 
     // Graceful horizontal expansion: shift all downstream nodes to the right to make room
     for (const node of Object.values(this.project.graph.nodes)) {
@@ -384,14 +391,12 @@ export class StudioState {
       if (dist <= 26) {
         // Case A: Dragging SwitchPoints onto a Boundary (extend mainline/siding)
         if ('SwitchPoints' in draggedNode.kind && 'Boundary' in targetNode.kind) {
-          // Re-route incoming edges that previously terminated at boundary to the switch points
           for (const edge of this.project.graph.edges) {
             if (edge.to === targetId) {
               edge.to = draggedId;
             }
           }
 
-          // Move the boundary to the end of the normal leg of this switch
           for (const edge of this.project.graph.edges) {
             if (edge.from === draggedId && 'SwitchNormal' in edge.kind) {
               const normTerminal = this.project.graph.nodes[edge.to];
@@ -405,19 +410,33 @@ export class StudioState {
             }
           }
 
-          this.selectedNodeId = draggedId;
+          this.selectNode(draggedId, false);
           this.runDrc();
           this.synthesizeRoutes();
           return;
         }
 
-        // Case B: Dragging a switch leg (trailing point) onto a Boundary or existing Track
+        // Case B: Dragging SwitchPoints onto a Bumper (extending spur track into a new switch)
+        if ('SwitchPoints' in draggedNode.kind && 'Bumper' in targetNode.kind) {
+          for (const edge of this.project.graph.edges) {
+            if (edge.to === targetId) {
+              edge.to = draggedId;
+            }
+          }
+          delete this.project.graph.nodes[targetId];
+
+          this.selectNode(draggedId, false);
+          this.runDrc();
+          this.synthesizeRoutes();
+          return;
+        }
+
+        // Case C: Dragging any junction/terminal onto an existing node
         for (const edge of this.project.graph.edges) {
           if (edge.from === draggedId) edge.from = targetId;
           if (edge.to === draggedId) edge.to = targetId;
         }
 
-        // If dragged node is an appliance, preserve its identity; otherwise remove dummy junction
         if (!('SwitchPoints' in draggedNode.kind || 'Irj' in draggedNode.kind || 'Boundary' in draggedNode.kind)) {
           delete this.project.graph.nodes[draggedId];
         } else {
@@ -425,7 +444,7 @@ export class StudioState {
           draggedNode.y = targetNode.y;
         }
 
-        this.selectedNodeId = targetId;
+        this.selectNode(targetId, false);
         this.runDrc();
         this.synthesizeRoutes();
         return;

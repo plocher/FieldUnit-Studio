@@ -42,8 +42,23 @@
 
   function handleWheel(event: WheelEvent) {
     event.preventDefault();
-    const factor = event.deltaY < 0 ? 1.08 : 0.92;
-    studio.setZoom(studio.zoom * factor);
+    const rect = svgElement?.getBoundingClientRect();
+    if (!rect) return;
+
+    const mouseX = event.clientX - rect.left;
+    const mouseY = event.clientY - rect.top;
+
+    // Untranslated coordinates under mouse cursor before zoom
+    const canvasX = (mouseX - studio.panX) / studio.zoom;
+    const canvasY = (mouseY - studio.panY) / studio.zoom;
+
+    const factor = event.deltaY < 0 ? 1.10 : 0.90;
+    const newZoom = Math.min(Math.max(studio.zoom * factor, 0.4), 3.0);
+
+    // Zoom centered precisely on mouse cursor
+    studio.panX = mouseX - canvasX * newZoom;
+    studio.panY = mouseY - canvasY * newZoom;
+    studio.zoom = newZoom;
   }
 
   function handleMouseDown(event: MouseEvent) {
@@ -64,7 +79,6 @@
           const toNode = studio.project.graph.nodes[edge.to];
           if (!fromNode || !toNode) continue;
 
-          // Simple distance to horizontal/angled segment
           const l2 = (toNode.x - fromNode.x) ** 2 + (toNode.y - fromNode.y) ** 2;
           let t = l2 === 0 ? 0 : ((canvasX - fromNode.x) * (toNode.x - fromNode.x) + (canvasY - fromNode.y) * (toNode.y - fromNode.y)) / l2;
           t = Math.max(0, Math.min(1, t));
@@ -98,12 +112,27 @@
       return;
     }
 
-    // 2. If clicking on an existing node group, node drag handler handles it
+    // 2. If clicking on an existing node group, start node/group drag
     if ((event.target as HTMLElement).closest('.node-group')) {
       return;
     }
 
-    // 3. Middle-click, Space+Click, or Shift+Click: Pan Canvas
+    // 3. If clicking on a track line, select the detection block and allow dragging the block's nodes
+    const trackGroup = (event.target as HTMLElement).closest('.clickable-track');
+    if (trackGroup && event.button === 0) {
+      const cId = trackGroup.getAttribute('data-circuit');
+      if (cId) {
+        studio.selectCircuit(cId);
+        if (studio.selectedNodeId && studio.project?.graph.nodes[studio.selectedNodeId]) {
+          const leadNode = studio.project.graph.nodes[studio.selectedNodeId];
+          draggingNodeId = studio.selectedNodeId;
+          dragOffset = { x: canvasX - leadNode.x, y: canvasY - leadNode.y };
+        }
+        return;
+      }
+    }
+
+    // 4. Middle-click, Space+Click, or Shift+Click: Pan Canvas
     if (event.button === 1 || isSpacePressed || event.shiftKey) {
       isPanning = true;
       panStartX = event.clientX - studio.panX;
@@ -111,7 +140,7 @@
       return;
     }
 
-    // 4. Normal Left-Click Drag on background: Marquee Selection Box
+    // 5. Normal Left-Click Drag on background: Marquee Selection Box
     if (event.button === 0) {
       isMarquee = true;
       marqueeStart = { x: canvasX, y: canvasY };
@@ -290,6 +319,7 @@
               <!-- svelte-ignore a11y_no_static_element_interactions -->
               <g
                 class="clickable-track"
+                data-circuit={circuitId}
                 onclick={(e) => {
                   e.stopPropagation();
                   if (circuitId) studio.selectCircuit(circuitId);
