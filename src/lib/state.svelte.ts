@@ -190,7 +190,10 @@ export class StudioState {
   }
 
   toggleLayer(layer: keyof LayerVisibility) {
-    this.layers[layer] = !this.layers[layer];
+    this.layers = {
+      ...this.layers,
+      [layer]: !this.layers[layer],
+    };
   }
 
   // Appliance creation from palette (click or drop)

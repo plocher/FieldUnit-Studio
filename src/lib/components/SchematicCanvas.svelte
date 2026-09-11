@@ -112,8 +112,8 @@
           stroke-width="1.5"
           stroke-dasharray="6 4"
         />
-        {#if studio.layers.names}
-          <!-- Centered CP Name at Bottom of CP Box -->
+        <!-- Centered CP Name at Bottom of CP Box -->
+        <g opacity={studio.layers.names ? 1.0 : 0.15}>
           <text
             x={studio.cpBounds.centerX}
             y={studio.cpBounds.bottomY - 10}
@@ -125,10 +125,10 @@
           >
             {studio.project.control_points[0]?.name.toUpperCase() || 'CP'}
           </text>
-        {/if}
+        </g>
 
         <!-- 1. Track Layer (Edges / Rails) - Bright or Dimmed -->
-        <g class="layer-group" class:dimmed={!studio.layers.track}>
+        <g opacity={studio.layers.track ? 1.0 : 0.15}>
           {#each studio.project.graph.edges as edge}
             {@const fromNode = studio.project.graph.nodes[edge.from]}
             {@const toNode = studio.project.graph.nodes[edge.to]}
@@ -161,7 +161,7 @@
               />
 
               <!-- Block Names in clean dark bubble with RED text (only on primary straight segments, not duplicated) -->
-              <g class="layer-group" class:dimmed={!studio.layers.electrical}>
+              <g opacity={studio.layers.electrical ? 1.0 : 0.15}>
                 {#if circuitId && (edge.id === 'E_APP' || edge.id === 'E_NORM' || edge.id === 'E_EXIT_MAIN' || edge.id === 'E_EXIT_SIDING')}
                   <g transform="translate({midX}, {midY})">
                     <rect x="-16" y="-8" width="32" height="16" rx="3" fill="#0f172a" stroke="#334155" stroke-width="1" />
@@ -187,24 +187,27 @@
               <!-- CP Boundary Limit Marker -->
               <rect x="-8" y="-14" width="16" height="28" rx="2" fill="#3b82f6" fill-opacity="0.2" stroke="#60a5fa" stroke-width="1.5" />
               <line x1="0" y1="-14" x2="0" y2="14" stroke="#60a5fa" stroke-width="2" />
-              <g class="layer-group" class:dimmed={!studio.layers.names}>
+              <g opacity={studio.layers.names ? 1.0 : 0.15}>
                 <text x="0" y="24" text-anchor="middle" fill="#93c5fd" font-size="10" font-weight="600">
                   {node.kind.Boundary.boundary_id}
                 </text>
               </g>
             {:else if 'Irj' in node.kind}
               <!-- Insulated Rail Joint Symbol ][ -->
-              <g class="layer-group" class:dimmed={!studio.layers.electrical}>
+              <g opacity={studio.layers.electrical ? 1.0 : 0.15}>
                 <line x1="-3" y1="-10" x2="-3" y2="10" stroke="#ef4444" stroke-width="2.5" />
                 <line x1="3" y1="-10" x2="3" y2="10" stroke="#ef4444" stroke-width="2.5" />
               </g>
             {:else if 'SwitchPoints' in node.kind}
               <!-- Switch Points Node: Subtle speed colored aura and clean identifier "1 [MED]" -->
-              <circle cx="0" cy="0" r="14" fill="#f59e0b" fill-opacity="0.2" />
+              <g opacity={studio.layers.speeds ? 1.0 : 0.15}>
+                <circle cx="0" cy="0" r="14" fill="#f59e0b" fill-opacity="0.2" />
+              </g>
               <circle cx="0" cy="0" r="5" fill="#f59e0b" stroke="#ffffff" stroke-width="1.5" />
-              <g class="layer-group" class:dimmed={!studio.layers.names}>
+              <g opacity={studio.layers.names ? 1.0 : 0.15}>
                 <text x="0" y="-12" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="bold">
-                  {node.kind.SwitchPoints.switch_id} <tspan fill="#f59e0b" font-size="9" font-weight="600">[MED]</tspan>
+                  {node.kind.SwitchPoints.switch_id}
+                  <tspan fill="#f59e0b" font-size="9" font-weight="600" opacity={studio.layers.speeds ? 1.0 : 0.15}>[MED]</tspan>
                 </text>
               </g>
             {:else if 'Junction' in node.kind}
@@ -221,25 +224,12 @@
         {/each}
 
         <!-- 3. Signal Layer (Horizontal Heads with Symmetrical Base Centered on Mast Arm) -->
-        <g class="layer-group" class:dimmed={!studio.layers.signals}>
+        <g opacity={studio.layers.signals ? 1.0 : 0.15}>
           {#each studio.project.control_points as cp}
             {#each cp.signal_masts as mast}
               {@const irjNode = mast.irj_node_id ? studio.project.graph.nodes[mast.irj_node_id] : null}
               {#if irjNode}
                 {@const isRight = mast.direction === 'Right'}
-                <!--
-                  Engineer Perspective with Symmetrical Mast Base:
-                  - Southbound (traffic right): Below rail on engineer's right:
-                    Base at IRJ gap x=0, vertical line centered on mast arm y=22.
-                    Mast arm -- connects from base to capsule at y=22.
-                    Capsule width=24, height=16 (centered at y=22, y from 14 to 30).
-                    Base is identical height=16 (y from 14 to 30), centered on mast arm.
-                    Not connected to IRJ (gap of 14px from rail).
-                  - Northbound (traffic left): Above rail on engineer's right:
-                    Base at IRJ gap x=0, vertical line centered on mast arm y=-22.
-                    Mast arm -- connects left from base to capsule.
-                    Base height=16 (y from -30 to -14), centered on mast arm.
-                -->
                 <g class="signal-mast-group">
                   {#if isRight}
                     <!-- 2Sab: Below rail, base centered on arm, arm extending right, heads horizontal: |--oo -->
@@ -256,7 +246,7 @@
                       <circle cx="30" cy="22" r="3.5" fill="#22c55e" stroke="#000000" stroke-width="0.8" />
 
                       <!-- Signal Name cleanly below capsule, no overlap -->
-                      <g class="layer-group" class:dimmed={!studio.layers.names}>
+                      <g opacity={studio.layers.names ? 1.0 : 0.15}>
                         <text x="26" y="44" text-anchor="middle" fill="#f8fafc" font-size="10" font-weight="700">
                           {mast.name}
                         </text>
@@ -282,7 +272,7 @@
                       {/if}
 
                       <!-- Signal Name cleanly above capsule, no overlap -->
-                      <g class="layer-group" class:dimmed={!studio.layers.names}>
+                      <g opacity={studio.layers.names ? 1.0 : 0.15}>
                         <text x={mast.mast_type === 'TwoHead' ? -26 : -18} y="-36" text-anchor="middle" fill="#f8fafc" font-size="10" font-weight="700">
                           {mast.name}
                         </text>
