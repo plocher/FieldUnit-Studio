@@ -7,6 +7,15 @@ import type {
   SynthesizedRoute,
 } from './types';
 
+// Helper: Distance from a point to a line segment
+function distToSegment(px: number, py: number, x1: number, y1: number, x2: number, y2: number): number {
+  const l2 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
+  if (l2 === 0) return Math.hypot(px - x1, py - y1);
+  let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - (x1 + t * (x2 - x1)), py - (y1 + t * (y2 - y1)));
+}
+
 export class StudioState {
   project = $state<ProjectFile | null>(null);
   workspaceMode = $state<WorkspaceMode>('schematic');
@@ -126,7 +135,7 @@ export class StudioState {
     this.panY = 0;
   }
 
-  // Node position update with cluster moving for switch appliances
+  // Node position update: moves switch points and all its connected legs as a cluster
   updateNodePosition(nodeId: string, newX: number, newY: number) {
     if (!this.project || !this.project.graph.nodes[nodeId]) return;
 
@@ -139,38 +148,33 @@ export class StudioState {
     node.x = snapX;
     node.y = snapY;
 
-    // If moving switch points, move the connected leg nodes together as a cluster
+    // If moving switch points, inspect the graph edges and move all outgoing terminal legs together
     if ('SwitchPoints' in node.kind) {
-      const swId = node.kind.SwitchPoints.switch_id;
-      const normLeg = this.project.graph.nodes[`SW${swId}_NORM`];
-      const revLeg = this.project.graph.nodes[`SW${swId}_REV`];
-      if (normLeg) {
-        normLeg.x += dx;
-        normLeg.y += dy;
-      }
-      if (revLeg) {
-        revLeg.x += dx;
-        revLeg.y += dy;
+      for (const edge of this.project.graph.edges) {
+        if (edge.from === nodeId) {
+          const target = this.project.graph.nodes[edge.to];
+          // Move target if it is a terminal, junction, bumper, or boundary
+          if (target && !('SwitchPoints' in target.kind)) {
+            target.x += dx;
+            target.y += dy;
+          }
+        }
       }
     }
   }
 
-  // Snap and merge dragged node into a nearby target node (within 24px)
+  // Universal Node Snapping and Wire Splitting
   snapAndMerge(draggedId: string) {
     if (!this.project || !this.project.graph.nodes[draggedId]) return;
     const draggedNode = this.project.graph.nodes[draggedId];
 
-    // Find a nearby candidate node to snap to
+    // 1. Check if dropped directly onto an existing node (snap to node)
     for (const [targetId, targetNode] of Object.entries(this.project.graph.nodes)) {
       if (targetId === draggedId) continue;
       const dist = Math.hypot(draggedNode.x - targetNode.x, draggedNode.y - targetNode.y);
-      if (dist <= 24) {
-        // Case 1: Dragging SwitchPoints onto a Boundary (extending track with a new switch)
+      if (dist <= 26) {
+        // Case A: Dragging SwitchPoints onto a Boundary (extend mainline/siding)
         if ('SwitchPoints' in draggedNode.kind && 'Boundary' in targetNode.kind) {
-          const swId = draggedNode.kind.SwitchPoints.switch_id;
-          const normLegId = `SW${swId}_NORM`;
-          const normLeg = this.project.graph.nodes[normLegId];
-
           // Re-route incoming edges that previously terminated at boundary to the switch points
           for (const edge of this.project.graph.edges) {
             if (edge.to === targetId) {
@@ -178,46 +182,76 @@ export class StudioState {
             }
           }
 
-          // Move the boundary to the end of the normal leg
-          if (normLeg) {
-            targetNode.x = normLeg.x;
-            targetNode.y = normLeg.y;
-
-            // Re-route the switch normal edge to terminate at the boundary
-            for (const edge of this.project.graph.edges) {
-              if (edge.to === normLegId) {
+          // Move the boundary to the end of the normal leg of this switch
+          for (const edge of this.project.graph.edges) {
+            if (edge.from === draggedId && 'SwitchNormal' in edge.kind) {
+              const normTerminal = this.project.graph.nodes[edge.to];
+              if (normTerminal) {
+                targetNode.x = normTerminal.x;
+                targetNode.y = normTerminal.y;
                 edge.to = targetId;
+                delete this.project.graph.nodes[normTerminal.id];
               }
+              break;
             }
-            delete this.project.graph.nodes[normLegId];
           }
 
           this.selectedNodeId = draggedId;
           this.runDrc();
           this.synthesizeRoutes();
-          break;
+          return;
         }
 
-        // Case 2: Dragging a leg junction onto an existing node
-        if ('Junction' in draggedNode.kind) {
-          for (const edge of this.project.graph.edges) {
-            if (edge.from === draggedId) edge.from = targetId;
-            if (edge.to === draggedId) edge.to = targetId;
-          }
+        // Case B: Dragging a switch leg (trailing point) onto a Boundary or existing Track
+        for (const edge of this.project.graph.edges) {
+          if (edge.from === draggedId) edge.from = targetId;
+          if (edge.to === draggedId) edge.to = targetId;
+        }
+
+        // If dragged node is an appliance, preserve its identity; otherwise remove dummy junction
+        if (!('SwitchPoints' in draggedNode.kind || 'Irj' in draggedNode.kind || 'Boundary' in draggedNode.kind)) {
           delete this.project.graph.nodes[draggedId];
-          this.selectedNodeId = targetId;
-          this.runDrc();
-          this.synthesizeRoutes();
-          break;
+        } else {
+          draggedNode.x = targetNode.x;
+          draggedNode.y = targetNode.y;
         }
 
-        // Case 3: General node snap
-        draggedNode.x = targetNode.x;
-        draggedNode.y = targetNode.y;
         this.selectedNodeId = targetId;
         this.runDrc();
         this.synthesizeRoutes();
-        break;
+        return;
+      }
+    }
+
+    // 2. Check if dropped onto a track edge line (split edge to insert inline node, e.g. IRJ)
+    if ('Irj' in draggedNode.kind) {
+      for (let i = 0; i < this.project.graph.edges.length; i++) {
+        const edge = this.project.graph.edges[i];
+        const fromNode = this.project.graph.nodes[edge.from];
+        const toNode = this.project.graph.nodes[edge.to];
+        if (!fromNode || !toNode) continue;
+
+        const dist = distToSegment(draggedNode.x, draggedNode.y, fromNode.x, fromNode.y, toNode.x, toNode.y);
+        if (dist <= 14) {
+          // Snap IRJ onto the edge line
+          draggedNode.y = fromNode.y; // Align with horizontal track
+
+          // Split edge: edge becomes (fromNode -> draggedNode), add (draggedNode -> toNode)
+          const originalTo = edge.to;
+          edge.to = draggedId;
+
+          this.project.graph.edges.push({
+            id: `E_SPLIT_${Date.now().toString().slice(-4)}`,
+            from: draggedId,
+            to: originalTo,
+            kind: edge.kind,
+            length_feet: edge.length_feet / 2,
+          });
+
+          this.runDrc();
+          this.synthesizeRoutes();
+          return;
+        }
       }
     }
   }
@@ -249,7 +283,7 @@ export class StudioState {
         const swId = `${nextOddSwitch}`;
         const nodePtsId = `SW${swId}_PTS`;
         const nodeNormId = `SW${swId}_NORM`;
-        const nodeRevId = `SW${swId}_REV`;
+        const nodeRevBumperId = `BUMPER_SW${swId}`;
 
         this.project.graph.nodes[nodePtsId] = {
           id: nodePtsId,
@@ -263,9 +297,9 @@ export class StudioState {
           x: roundedX + 100,
           y: roundedY,
         };
-        this.project.graph.nodes[nodeRevId] = {
-          id: nodeRevId,
-          kind: { Junction: { id: `J_${swId}_R` } },
+        this.project.graph.nodes[nodeRevBumperId] = {
+          id: nodeRevBumperId,
+          kind: { Bumper: { id: nodeRevBumperId } },
           x: roundedX + 100,
           y: roundedY + 60,
         };
@@ -280,20 +314,21 @@ export class StudioState {
         this.project.graph.edges.push({
           id: `E_SW${swId}_REV`,
           from: nodePtsId,
-          to: nodeRevId,
-          kind: { SwitchReverse: { switch_id: swId, circuit_id: `${swId}T`, speed: 'Medium' } },
+          to: nodeRevBumperId,
+          kind: { SwitchReverse: { switch_id: swId, circuit_id: `${swId}T`, speed: 'Slow' } },
           length_feet: 120,
         });
 
         cp.switches.push({
           id: swId,
           name: swId,
-          speed: 'Medium',
+          speed: 'Slow',
           motor_pin: null,
           normal_sense_pin: null,
           reverse_sense_pin: null,
           island_circuit_id: `${swId}T`,
         });
+        this.selectedNodeId = nodePtsId;
         break;
       }
       case 'irj': {

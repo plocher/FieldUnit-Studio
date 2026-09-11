@@ -152,11 +152,13 @@ fn test_route_synthesis_end_of_siding() {
     assert_eq!(routes.len(), 2, "Expected exactly 2 routes from Signal 2R");
 
     let main_route = routes.iter().find(|r| r.exit_node_id == "B_EAST_MAIN").expect("Main route must exist");
+    assert_eq!(main_route.name, "WEST-to-EAST_MAIN");
     assert_eq!(main_route.aspect_ceiling, Indication::Clear);
     assert_eq!(main_route.switch_alignments.get("SW1"), Some(&SwitchPosition::Normal));
     assert!(main_route.fleeting_capable);
 
     let siding_route = routes.iter().find(|r| r.exit_node_id == "B_EAST_SIDING").expect("Siding route must exist");
+    assert_eq!(siding_route.name, "WEST-to-EAST_SIDING");
     assert_eq!(siding_route.aspect_ceiling, Indication::DivergingClear);
     assert_eq!(siding_route.switch_alignments.get("SW1"), Some(&SwitchPosition::Reverse));
     assert!(siding_route.call_on_capable);

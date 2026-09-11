@@ -10,6 +10,30 @@
   let draggingNodeId = $state<string | null>(null);
   let dragOffset = $state({ x: 0, y: 0 });
 
+  // Smooth Edge Auto-Pan via requestAnimationFrame
+  let panVelocity = { x: 0, y: 0 };
+  let animFrameId: number | null = null;
+
+  function startAutoPanLoop() {
+    if (animFrameId !== null) return;
+    function loop() {
+      if (panVelocity.x !== 0 || panVelocity.y !== 0) {
+        studio.panX += panVelocity.x;
+        studio.panY += panVelocity.y;
+      }
+      animFrameId = requestAnimationFrame(loop);
+    }
+    animFrameId = requestAnimationFrame(loop);
+  }
+
+  function stopAutoPanLoop() {
+    if (animFrameId !== null) {
+      cancelAnimationFrame(animFrameId);
+      animFrameId = null;
+    }
+    panVelocity = { x: 0, y: 0 };
+  }
+
   function handleWheel(event: WheelEvent) {
     event.preventDefault();
     const factor = event.deltaY < 0 ? 1.08 : 0.92;
@@ -32,18 +56,28 @@
       const rect = svgElement?.getBoundingClientRect();
       if (!rect) return;
 
-      // Auto-pan viewport when dragging near edges
-      const edgeMargin = 50;
-      const panSpeed = 8;
-      if (event.clientX < rect.left + edgeMargin) {
-        studio.panX += panSpeed;
-      } else if (event.clientX > rect.right - edgeMargin) {
-        studio.panX -= panSpeed;
+      // Calculate continuous smooth auto-pan velocity near edges
+      const margin = 60;
+      const speed = 12;
+      let vx = 0;
+      let vy = 0;
+
+      if (event.clientX < rect.left + margin) {
+        vx = speed;
+      } else if (event.clientX > rect.right - margin) {
+        vx = -speed;
       }
-      if (event.clientY < rect.top + edgeMargin) {
-        studio.panY += panSpeed;
-      } else if (event.clientY > rect.bottom - edgeMargin) {
-        studio.panY -= panSpeed;
+      if (event.clientY < rect.top + margin) {
+        vy = speed;
+      } else if (event.clientY > rect.bottom - margin) {
+        vy = -speed;
+      }
+
+      panVelocity = { x: vx, y: vy };
+      if (vx !== 0 || vy !== 0) {
+        startAutoPanLoop();
+      } else {
+        stopAutoPanLoop();
       }
 
       const mouseX = (event.clientX - rect.left - studio.panX) / studio.zoom;
@@ -53,6 +87,7 @@
   }
 
   function handleMouseUp() {
+    stopAutoPanLoop();
     if (draggingNodeId) {
       studio.snapAndMerge(draggingNodeId);
     }
