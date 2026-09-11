@@ -126,11 +126,66 @@ export class StudioState {
     this.panY = 0;
   }
 
-  // Node position update (rubberbanding)
-  updateNodePosition(nodeId: string, x: number, y: number) {
-    if (this.project && this.project.graph.nodes[nodeId]) {
-      this.project.graph.nodes[nodeId].x = Math.round(x / 10) * 10;
-      this.project.graph.nodes[nodeId].y = Math.round(y / 10) * 10;
+  // Node position update with cluster moving for switch appliances
+  updateNodePosition(nodeId: string, newX: number, newY: number) {
+    if (!this.project || !this.project.graph.nodes[nodeId]) return;
+
+    const node = this.project.graph.nodes[nodeId];
+    const snapX = Math.round(newX / 10) * 10;
+    const snapY = Math.round(newY / 10) * 10;
+    const dx = snapX - node.x;
+    const dy = snapY - node.y;
+
+    node.x = snapX;
+    node.y = snapY;
+
+    // If moving switch points, move the connected leg nodes together as a cluster
+    if ('SwitchPoints' in node.kind) {
+      const swId = node.kind.SwitchPoints.switch_id;
+      const normLeg = this.project.graph.nodes[`SW${swId}_NORM`];
+      const revLeg = this.project.graph.nodes[`SW${swId}_REV`];
+      if (normLeg) {
+        normLeg.x += dx;
+        normLeg.y += dy;
+      }
+      if (revLeg) {
+        revLeg.x += dx;
+        revLeg.y += dy;
+      }
+    }
+  }
+
+  // Snap and merge dragged node into a nearby target node (within 22px)
+  snapAndMerge(draggedId: string) {
+    if (!this.project || !this.project.graph.nodes[draggedId]) return;
+    const draggedNode = this.project.graph.nodes[draggedId];
+
+    // Find a nearby candidate node to snap to
+    for (const [targetId, targetNode] of Object.entries(this.project.graph.nodes)) {
+      if (targetId === draggedId) continue;
+      const dist = Math.hypot(draggedNode.x - targetNode.x, draggedNode.y - targetNode.y);
+      if (dist <= 22) {
+        // Snap to target coordinates
+        draggedNode.x = targetNode.x;
+        draggedNode.y = targetNode.y;
+
+        // Re-route all edges from/to draggedId to targetId
+        for (const edge of this.project.graph.edges) {
+          if (edge.from === draggedId) {
+            edge.from = targetId;
+          }
+          if (edge.to === draggedId) {
+            edge.to = targetId;
+          }
+        }
+
+        // Delete the duplicate dragged node
+        delete this.project.graph.nodes[draggedId];
+        this.selectedNodeId = targetId;
+        this.runDrc();
+        this.synthesizeRoutes();
+        break;
+      }
     }
   }
 
