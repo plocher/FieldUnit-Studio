@@ -17,6 +17,10 @@
   let dragOffset = $state({ x: 0, y: 0 });
   let hasDragged = false;
 
+  // Group dragging from track line
+  let isGroupDragging = false;
+  let lastDragPos = { x: 0, y: 0 };
+
   // Smooth Edge Auto-Pan via requestAnimationFrame
   let panVelocity = { x: 0, y: 0 };
   let animFrameId: number | null = null;
@@ -135,12 +139,15 @@
       return;
     }
 
-    // 4. If clicking on a track line, select the detection block for inspection
+    // 4. If clicking on a track line, select the detection block and allow dragging the entire block
     const trackGroup = (event.target as HTMLElement).closest('.clickable-track');
     if (trackGroup && event.button === 0) {
       const cId = trackGroup.getAttribute('data-circuit');
       if (cId) {
         studio.selectCircuit(cId);
+        isGroupDragging = true;
+        lastDragPos = { x: canvasX, y: canvasY };
+        hasDragged = false;
         return;
       }
     }
@@ -161,6 +168,23 @@
     if (isPanning) {
       studio.panX = event.clientX - panStartX;
       studio.panY = event.clientY - panStartY;
+    } else if (isGroupDragging && studio.project) {
+      hasDragged = true;
+      const canvasX = (event.clientX - rect.left - studio.panX) / studio.zoom;
+      const canvasY = (event.clientY - rect.top - studio.panY) / studio.zoom;
+      const dx = Math.round((canvasX - lastDragPos.x) / 10) * 10;
+      const dy = Math.round((canvasY - lastDragPos.y) / 10) * 10;
+
+      if (dx !== 0 || dy !== 0) {
+        for (const id of studio.selectedNodeIds) {
+          const n = studio.project.graph.nodes[id];
+          if (n) {
+            n.x += dx;
+            n.y += dy;
+          }
+        }
+        lastDragPos = { x: canvasX, y: canvasY };
+      }
     } else if (isMarquee) {
       const canvasX = (event.clientX - rect.left - studio.panX) / studio.zoom;
       const canvasY = (event.clientY - rect.top - studio.panY) / studio.zoom;
@@ -199,6 +223,15 @@
 
   function handleMouseUp() {
     stopAutoPanLoop();
+
+    if (isGroupDragging) {
+      isGroupDragging = false;
+      if (hasDragged) {
+        studio.saveSnapshot();
+        studio.runDrc();
+        studio.synthesizeRoutes();
+      }
+    }
 
     if (isMarquee) {
       studio.selectNodesInBox(marqueeStart.x, marqueeStart.y, marqueeCurrent.x, marqueeCurrent.y);

@@ -297,7 +297,7 @@ export class StudioState {
     }
   }
 
-  // Delete selected nodes and clean up connected edges and appliances
+  // Delete selected nodes and clean up connected edges, appliances, and orphaned terminals
   deleteSelected() {
     if (!this.project) return;
     const idsToDelete = this.selectedNodeIds.length > 0
@@ -307,6 +307,7 @@ export class StudioState {
       : [];
 
     if (idsToDelete.length === 0) return;
+    this.saveSnapshot();
     const cp = this.project.control_points[0];
 
     for (const id of idsToDelete) {
@@ -314,6 +315,19 @@ export class StudioState {
       if (node && 'SwitchPoints' in node.kind) {
         const swId = node.kind.SwitchPoints.switch_id;
         cp.switches = cp.switches.filter((s) => s.id !== swId);
+
+        // Clean up any unattached leg terminals or bumpers created for this switch
+        const normTerminalId = `SW${swId}_NORM`;
+        const revBumperId = `BUMPER_SW${swId}`;
+        delete this.project.graph.nodes[normTerminalId];
+        delete this.project.graph.nodes[revBumperId];
+
+        // If this switch was inline (incoming -> PTS -> outgoing), heal the track
+        const incomingEdge = this.project.graph.edges.find((e) => e.to === id);
+        const outgoingNormEdge = this.project.graph.edges.find((e) => e.from === id && 'SwitchNormal' in e.kind);
+        if (incomingEdge && outgoingNormEdge && outgoingNormEdge.to !== normTerminalId) {
+          incomingEdge.to = outgoingNormEdge.to;
+        }
       }
       if (node && 'Irj' in node.kind) {
         cp.signal_masts = cp.signal_masts.filter((m) => m.irj_node_id !== id);
@@ -321,12 +335,13 @@ export class StudioState {
       delete this.project.graph.nodes[id];
     }
 
-    // Remove any edges connected to deleted nodes
+    // Remove any remaining edges connected to deleted nodes
     this.project.graph.edges = this.project.graph.edges.filter(
       (e) => !idsToDelete.includes(e.from) && !idsToDelete.includes(e.to)
     );
 
     this.clearSelection();
+    this.renumberAppliancesWestToEast();
     this.runDrc();
     this.synthesizeRoutes();
   }
@@ -380,23 +395,33 @@ export class StudioState {
     this.saveSnapshot();
 
     const edge = this.project.graph.edges[edgeIndex];
-    const snapX = Math.round(x / 10) * 10;
-    const snapY = Math.round(y / 10) * 10;
+    const fromNode = this.project.graph.nodes[edge.from];
+    const toNode = this.project.graph.nodes[edge.to];
+    if (!fromNode || !toNode) return null;
+
+    // Project click position accurately onto the edge vector
+    const l2 = (toNode.x - fromNode.x) ** 2 + (toNode.y - fromNode.y) ** 2;
+    let t = l2 === 0 ? 0.5 : ((x - fromNode.x) * (toNode.x - fromNode.x) + (y - fromNode.y) * (toNode.y - fromNode.y)) / l2;
+    t = Math.max(0.2, Math.min(0.8, t));
+
+    const snapX = Math.round((fromNode.x + t * (toNode.x - fromNode.x)) / 10) * 10;
+    const snapY = Math.round((fromNode.y + t * (toNode.y - fromNode.y)) / 10) * 10;
     const shiftDistance = 140;
 
-    // Gracefully shift all downstream nodes rightward
+    // Shift only downstream nodes connected after toNode
     for (const node of Object.values(this.project.graph.nodes)) {
-      if (node.x >= snapX) {
+      if (node.x >= snapX + 10 && node.id !== toNode.id) {
         node.x += shiftDistance;
       }
     }
+    toNode.x += shiftDistance;
 
     const cp = this.project.control_points[0];
     const tempId = `${Date.now().toString().slice(-4)}`;
     const ptsId = `SW${tempId}_PTS`;
     const revBumperId = `BUMPER_SW${tempId}`;
 
-    // Switch points inserted at cut location
+    // Switch points inserted directly on the track line
     this.project.graph.nodes[ptsId] = {
       id: ptsId,
       kind: { SwitchPoints: { switch_id: tempId } },
@@ -409,10 +434,10 @@ export class StudioState {
       id: revBumperId,
       kind: { Bumper: { id: revBumperId } },
       x: snapX + 100,
-      y: snapY + 60,
+      y: snapY + 50,
     };
 
-    // Original incoming track terminates at switch points
+    // Original incoming track terminates at new switch points
     const originalTo = edge.to;
     edge.to = ptsId;
 
@@ -421,7 +446,7 @@ export class StudioState {
       id: `E_SW${tempId}_NORM`,
       from: ptsId,
       to: originalTo,
-      kind: { SwitchNormal: { switch_id: tempId, circuit_id: edge.kind ? ('Tangent' in edge.kind ? edge.kind.Tangent.circuit_id : '1T') : '1T' } },
+      kind: { SwitchNormal: { switch_id: tempId, circuit_id: '1T' } },
       length_feet: 100,
     });
 
