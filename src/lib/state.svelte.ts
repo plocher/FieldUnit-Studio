@@ -737,28 +737,28 @@ export class StudioState {
 
     // Calculate offsets based on orientation
     let normDx = 100, normDy = 0;
-    let revDx = 100, revDy = 60;
+    let revDx = 100, revDy = 100;
 
     switch (nextOrient) {
       case 'FacingEastDivergeDown':
-        normDx = 100; normDy = 0; revDx = 100; revDy = 60;
+        normDx = 100; normDy = 0; revDx = 100; revDy = 100;
         break;
       case 'FacingEastDivergeUp':
-        normDx = 100; normDy = 0; revDx = 100; revDy = -60;
+        normDx = 100; normDy = 0; revDx = 100; revDy = -100;
         break;
       case 'FacingWestDivergeDown':
-        normDx = -100; normDy = 0; revDx = -100; revDy = 60;
+        normDx = -100; normDy = 0; revDx = -100; revDy = 100;
         break;
       case 'FacingWestDivergeUp':
-        normDx = -100; normDy = 0; revDx = -100; revDy = -60;
+        normDx = -100; normDy = 0; revDx = -100; revDy = -100;
         break;
     }
 
-    // Reposition unpinned reverse leg terminal / bumper
+    // Reposition reverse branch terminal, IRJ, or bumper to match new diverge angle
     for (const edge of this.project.graph.edges) {
       if (edge.from === ptsId && 'SwitchReverse' in edge.kind) {
         const revNode = this.project.graph.nodes[edge.to];
-        if (revNode && ('Bumper' in revNode.kind || 'Junction' in revNode.kind)) {
+        if (revNode) {
           revNode.x = ptsNode.x + revDx;
           revNode.y = ptsNode.y + revDy;
         }

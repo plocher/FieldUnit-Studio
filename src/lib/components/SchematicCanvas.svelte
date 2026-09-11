@@ -8,6 +8,9 @@
   let panStartX = $state(0);
   let panStartY = $state(0);
 
+  // Mouse position in untranslated canvas coordinates (for ghost preview)
+  let mouseCanvasPos = $state({ x: 0, y: 0 });
+
   // Marquee Bounding Box Selection
   let isMarquee = $state(false);
   let marqueeStart = $state({ x: 0, y: 0 });
@@ -165,6 +168,10 @@
     const rect = svgElement?.getBoundingClientRect();
     if (!rect) return;
 
+    const canvasX = (event.clientX - rect.left - studio.panX) / studio.zoom;
+    const canvasY = (event.clientY - rect.top - studio.panY) / studio.zoom;
+    mouseCanvasPos = { x: canvasX, y: canvasY };
+
     if (isPanning) {
       studio.panX = event.clientX - panStartX;
       studio.panY = event.clientY - panStartY;
@@ -282,6 +289,9 @@
   onkeydown={(e) => {
     if (e.code === 'Space') isSpacePressed = true;
     if (e.key === 'Escape') studio.activeTool = null;
+    if (e.key.toLowerCase() === 'r') {
+      studio.rotateSelectedSwitch();
+    }
   }}
   onkeyup={(e) => {
     if (e.code === 'Space') isSpacePressed = false;
@@ -552,11 +562,37 @@
             stroke-dasharray="4 4"
           />
         {/if}
+
+        <!-- Interactive Ghost Turnout Preview when tool is armed -->
+        {#if studio.activeTool === 'turnout' && !draggingNodeId}
+          {@const gx = Math.round(mouseCanvasPos.x / 10) * 10}
+          {@const gy = Math.round(mouseCanvasPos.y / 10) * 10}
+          {@const o = studio.armedTurnoutOrientation}
+          {@const normX = o.includes('East') ? 100 : -100}
+          {@const revX = o.includes('East') ? 100 : -100}
+          {@const revY = o.includes('Down') ? 60 : -60}
+          <g transform="translate({gx}, {gy})" opacity="0.65" pointer-events="none">
+            <!-- Ghost Normal Branch -->
+            <line x1="0" y1="0" x2={normX} y2="0" stroke="#38bdf8" stroke-width="3" stroke-dasharray="4 4" />
+            <!-- Ghost Reverse Branch -->
+            <line x1="0" y1="0" x2={revX} y2={revY} stroke="#f59e0b" stroke-width="3" stroke-dasharray="4 4" />
+            <!-- Ghost Points -->
+            <circle cx="0" cy="0" r="6" fill="#f59e0b" stroke="#ffffff" stroke-width="1.5" />
+            <text x="0" y={revY > 0 ? -14 : 20} text-anchor="middle" fill="#38bdf8" font-size="10" font-weight="700">
+              [R: Rotate/Flip]
+            </text>
+          </g>
+        {/if}
       {/if}
     </g>
   </svg>
 
   <div class="hud-overlay">
+    {#if studio.activeTool === 'turnout'}
+      <div class="hud-item armed-hud">
+        Armed: Turnout ({studio.armedTurnoutOrientation}) | Press R to rotate | Esc to cancel
+      </div>
+    {/if}
     <div class="hud-item">Zoom: {Math.round(studio.zoom * 100)}%</div>
     <div class="hud-item">Hint: Drag nodes to adjust geometry</div>
   </div>
