@@ -309,6 +309,40 @@ export class StudioState {
     this.synthesizeRoutes();
   }
 
+  // Cleanly split an existing track edge and insert an IRJ node without creating extraneous nodes
+  insertIrjOnEdge(edgeIndex: number, x: number, y: number): string | null {
+    if (!this.project || edgeIndex < 0 || edgeIndex >= this.project.graph.edges.length) return null;
+    this.saveSnapshot();
+
+    const edge = this.project.graph.edges[edgeIndex];
+    const snapX = Math.round(x / 10) * 10;
+    const snapY = Math.round(y / 10) * 10;
+    const irjId = `IRJ_${Date.now().toString().slice(-4)}`;
+
+    this.project.graph.nodes[irjId] = {
+      id: irjId,
+      kind: { Irj: { id: irjId, circuit_left: '1T', circuit_right: '2T' } },
+      x: snapX,
+      y: snapY,
+    };
+
+    const originalTo = edge.to;
+    edge.to = irjId;
+
+    this.project.graph.edges.push({
+      id: `E_SPLIT_${Date.now().toString().slice(-4)}`,
+      from: irjId,
+      to: originalTo,
+      kind: edge.kind,
+      length_feet: edge.length_feet / 2,
+    });
+
+    this.selectNode(irjId, false);
+    this.runDrc();
+    this.synthesizeRoutes();
+    return irjId;
+  }
+
   // Universal Node Snapping and Wire Splitting
   snapAndMerge(draggedId: string) {
     if (!this.project || !this.project.graph.nodes[draggedId]) return;

@@ -14,7 +14,15 @@
   <!-- Top Menu Bar -->
   <div class="menu-bar">
     <div class="menu-left">
-      <div class="logo-mark">FU</div>
+      <div class="logo-mark" title="FieldUnit Studio">
+        <svg width="22" height="22" viewBox="0 0 24 24">
+          <line x1="3" y1="7" x2="21" y2="7" stroke="#e2e8f0" stroke-width="2" stroke-linecap="round" />
+          <line x1="3" y1="17" x2="21" y2="17" stroke="#e2e8f0" stroke-width="2" stroke-linecap="round" />
+          <line x1="7" y1="17" x2="17" y2="7" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" />
+          <circle cx="7" cy="17" r="2" fill="#f59e0b" />
+          <circle cx="17" cy="7" r="2" fill="#38bdf8" />
+        </svg>
+      </div>
       <div class="menu-item dropdown">
         <span class="menu-label">Edit</span>
         <div class="dropdown-menu">
@@ -106,16 +114,14 @@
   }
 
   .logo-mark {
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
     border-radius: 4px;
-    background: linear-gradient(135deg, #0284c7, #0369a1);
-    color: #ffffff;
+    background: #182234;
+    border: 1px solid #334155;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 800;
-    font-size: 10px;
   }
 
   .menu-item {

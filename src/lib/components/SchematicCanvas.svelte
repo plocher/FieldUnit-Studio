@@ -54,6 +54,41 @@
 
     // 1. If an appliance tool is armed in the palette, stamp a new appliance and drag it
     if (studio.activeTool && event.button === 0) {
+      // Check if clicking directly on an existing track edge to insert an inline IRJ / Block division
+      let hitEdgeIndex = -1;
+      let snapY = canvasY;
+      if (studio.project && (studio.activeTool === 'irj' || studio.activeTool === 'block')) {
+        for (let i = 0; i < studio.project.graph.edges.length; i++) {
+          const edge = studio.project.graph.edges[i];
+          const fromNode = studio.project.graph.nodes[edge.from];
+          const toNode = studio.project.graph.nodes[edge.to];
+          if (!fromNode || !toNode) continue;
+
+          // Simple distance to horizontal/angled segment
+          const l2 = (toNode.x - fromNode.x) ** 2 + (toNode.y - fromNode.y) ** 2;
+          let t = l2 === 0 ? 0 : ((canvasX - fromNode.x) * (toNode.x - fromNode.x) + (canvasY - fromNode.y) * (toNode.y - fromNode.y)) / l2;
+          t = Math.max(0, Math.min(1, t));
+          const projX = fromNode.x + t * (toNode.x - fromNode.x);
+          const projY = fromNode.y + t * (toNode.y - fromNode.y);
+          const dist = Math.hypot(canvasX - projX, canvasY - projY);
+
+          if (dist <= 18) {
+            hitEdgeIndex = i;
+            snapY = projY;
+            break;
+          }
+        }
+      }
+
+      if (hitEdgeIndex >= 0) {
+        const createdId = studio.insertIrjOnEdge(hitEdgeIndex, canvasX, snapY);
+        if (createdId) {
+          draggingNodeId = createdId;
+          dragOffset = { x: 0, y: 0 };
+        }
+        return;
+      }
+
       const createdId = studio.addAppliance(studio.activeTool, canvasX, canvasY);
       if (createdId && studio.project?.graph.nodes[createdId]) {
         const node = studio.project.graph.nodes[createdId];
@@ -144,7 +179,11 @@
   function startNodeDrag(event: MouseEvent, node: TrackNode) {
     event.stopPropagation();
     draggingNodeId = node.id;
-    studio.selectNode(node.id, event.shiftKey);
+
+    // If node is already part of multi-selection, preserve group selection for dragging
+    if (!studio.selectedNodeIds.includes(node.id)) {
+      studio.selectNode(node.id, event.shiftKey);
+    }
 
     const rect = svgElement?.getBoundingClientRect();
     if (!rect) return;
