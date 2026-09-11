@@ -217,23 +217,24 @@ export class StudioState {
     this.selectedCircuitId = null;
   }
 
-  // Select entire Detection Block and its bounding IRJs
+  // Select entire Detection Block and all its bounding/endpoint nodes
   selectCircuit(circuitId: string) {
     if (!this.project) return;
     this.selectedCircuitId = circuitId;
 
-    // Find all bounding IRJs and nodes connected to this circuit
-    const boundingNodes: string[] = [];
-    for (const [id, node] of Object.entries(this.project.graph.nodes)) {
-      if ('Irj' in node.kind) {
-        if (node.kind.Irj.circuit_left === circuitId || node.kind.Irj.circuit_right === circuitId) {
-          boundingNodes.push(id);
-        }
+    const nodeSet = new Set<string>();
+    for (const edge of this.project.graph.edges) {
+      const cId = 'Tangent' in edge.kind ? edge.kind.Tangent.circuit_id :
+                  'SwitchNormal' in edge.kind ? edge.kind.SwitchNormal.circuit_id :
+                  'SwitchReverse' in edge.kind ? edge.kind.SwitchReverse.circuit_id : '';
+      if (cId === circuitId) {
+        nodeSet.add(edge.from);
+        nodeSet.add(edge.to);
       }
     }
 
-    this.selectedNodeIds = boundingNodes;
-    this.selectedNodeId = boundingNodes[0] || null;
+    this.selectedNodeIds = Array.from(nodeSet);
+    this.selectedNodeId = this.selectedNodeIds[0] || null;
   }
 
   // KiCad-style 'U' key: extend selection group one level along connected edges
@@ -508,8 +509,12 @@ export class StudioState {
     for (const [targetId, targetNode] of Object.entries(this.project.graph.nodes)) {
       if (targetId === draggedId) continue;
 
-      // Safety check: Never merge two distinct IRJ joints together
+      // Safety checks: never merge two IRJs or nodes that are already direct neighbors
       if ('Irj' in draggedNode.kind && 'Irj' in targetNode.kind) continue;
+      const alreadyConnected = this.project.graph.edges.some(
+        (e) => (e.from === draggedId && e.to === targetId) || (e.from === targetId && e.to === draggedId)
+      );
+      if (alreadyConnected) continue;
 
       const dist = Math.hypot(draggedNode.x - targetNode.x, draggedNode.y - targetNode.y);
       if (dist <= 26) {

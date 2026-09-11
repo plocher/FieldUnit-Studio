@@ -15,6 +15,7 @@
 
   let draggingNodeId = $state<string | null>(null);
   let dragOffset = $state({ x: 0, y: 0 });
+  let hasDragged = false;
 
   // Smooth Edge Auto-Pan via requestAnimationFrame
   let panVelocity = { x: 0, y: 0 };
@@ -165,6 +166,7 @@
       const canvasY = (event.clientY - rect.top - studio.panY) / studio.zoom;
       marqueeCurrent = { x: canvasX, y: canvasY };
     } else if (draggingNodeId && studio.project) {
+      hasDragged = true;
       // Auto-pan viewport when dragging near edges
       const margin = 60;
       const speed = 12;
@@ -202,16 +204,20 @@
       studio.selectNodesInBox(marqueeStart.x, marqueeStart.y, marqueeCurrent.x, marqueeCurrent.y);
       isMarquee = false;
     } else if (draggingNodeId) {
-      studio.snapAndMerge(draggingNodeId);
+      if (hasDragged) {
+        studio.snapAndMerge(draggingNodeId);
+      }
       draggingNodeId = null;
     }
 
+    hasDragged = false;
     isPanning = false;
   }
 
   function startNodeDrag(event: MouseEvent, node: TrackNode) {
     event.stopPropagation();
     draggingNodeId = node.id;
+    hasDragged = false;
 
     // If node is already part of multi-selection, preserve group selection for dragging
     if (!studio.selectedNodeIds.includes(node.id)) {
@@ -350,6 +356,19 @@
                   stroke-width="8"
                   stroke-linecap="round"
                 />
+                <!-- Selection glow halo -->
+                {#if isRouteHighlighted || isCircuitSelected}
+                  <line
+                    x1={fromNode.x}
+                    y1={fromNode.y}
+                    x2={toNode.x}
+                    y2={toNode.y}
+                    stroke="#38bdf8"
+                    stroke-width="8"
+                    stroke-opacity="0.35"
+                    stroke-linecap="round"
+                  />
+                {/if}
                 <!-- Steel Rails -->
                 <line
                   x1={fromNode.x}
@@ -359,7 +378,6 @@
                   stroke={isRouteHighlighted || isCircuitSelected ? '#38bdf8' : '#94a3b8'}
                   stroke-width={isRouteHighlighted || isCircuitSelected ? 4 : 3}
                   stroke-linecap="round"
-                  filter={isRouteHighlighted || isCircuitSelected ? 'url(#route-glow)' : 'none'}
                 />
 
                 <!-- Block Names in clean dark bubble with RED text (only on primary straight segments, not duplicated) -->
