@@ -13,9 +13,19 @@
   });
 
   function handleKeyDown(event: KeyboardEvent) {
-    // Ignore keystrokes when typing inside input or select
     const target = event.target as HTMLElement;
     if (target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.tagName === 'TEXTAREA') {
+      return;
+    }
+
+    // Undo / Redo
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') {
+      event.preventDefault();
+      if (event.shiftKey) {
+        studio.redo();
+      } else {
+        studio.undo();
+      }
       return;
     }
 
@@ -34,6 +44,14 @@
         break;
       case 'n':
         studio.toggleLayer('names');
+        break;
+      case 'u':
+        // KiCad-style 'U' key: extend selection group one level along connected tracks
+        studio.extendSelection();
+        break;
+      case 'l':
+        // Auto-arrange / tidy layout
+        studio.autoArrange();
         break;
       case 'delete':
       case 'backspace':

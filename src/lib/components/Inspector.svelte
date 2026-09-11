@@ -71,16 +71,12 @@
           <div class="prop-group">
             <div class="group-title">INSULATED RAIL JOINT</div>
             <div class="prop-row">
-              <span class="prop-label">Left Block:</span>
+              <span class="prop-label">Left Circuit:</span>
               <span class="prop-val monospace">{node.kind.Irj.circuit_left}</span>
             </div>
             <div class="prop-row">
-              <span class="prop-label">Right Block:</span>
+              <span class="prop-label">Right Circuit:</span>
               <span class="prop-val monospace">{node.kind.Irj.circuit_right}</span>
-            </div>
-            <div class="prop-row">
-              <span class="prop-label">Dropout Delay:</span>
-              <span class="prop-val">2000 ms</span>
             </div>
           </div>
         {/if}

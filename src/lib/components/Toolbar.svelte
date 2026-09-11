@@ -16,6 +16,15 @@
     <div class="menu-left">
       <div class="logo-mark">FU</div>
       <div class="menu-item dropdown">
+        <span class="menu-label">Edit</span>
+        <div class="dropdown-menu">
+          <button class="dropdown-btn" onclick={() => studio.undo()}>Undo (Cmd+Z)</button>
+          <button class="dropdown-btn" onclick={() => studio.redo()}>Redo (Cmd+Shift+Z)</button>
+          <hr class="menu-divider" />
+          <button class="dropdown-btn" onclick={() => studio.deleteSelected()}>Delete Selected</button>
+        </div>
+      </div>
+      <div class="menu-item dropdown">
         <span class="menu-label">Interlocking</span>
         <div class="dropdown-menu">
           <button class="dropdown-btn" onclick={() => studio.synthesizeRoutes()}>Synthesize Routes</button>
@@ -27,6 +36,8 @@
       <div class="menu-item dropdown">
         <span class="menu-label">View</span>
         <div class="dropdown-menu">
+          <button class="dropdown-btn" onclick={() => studio.autoArrange()}>Tidy Model Board (L)</button>
+          <hr class="menu-divider" />
           <button class="dropdown-btn" onclick={() => studio.zoomIn()}>Zoom In (+)</button>
           <button class="dropdown-btn" onclick={() => studio.zoomOut()}>Zoom Out (-)</button>
           <button class="dropdown-btn" onclick={() => studio.resetZoom()}>Fit Normal (100%)</button>

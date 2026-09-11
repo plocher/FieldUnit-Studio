@@ -4,6 +4,7 @@
 
   let svgElement: SVGSVGElement | null = $state(null);
   let isPanning = $state(false);
+  let isSpacePressed = $state(false);
   let panStartX = $state(0);
   let panStartY = $state(0);
 
@@ -46,29 +47,40 @@
   }
 
   function handleMouseDown(event: MouseEvent) {
-    // If clicking on a node group, node drag handler takes over
-    if ((event.target as HTMLElement).closest('.node-group')) {
-      return;
-    }
-
     const rect = svgElement?.getBoundingClientRect();
     if (!rect) return;
     const canvasX = (event.clientX - rect.left - studio.panX) / studio.zoom;
     const canvasY = (event.clientY - rect.top - studio.panY) / studio.zoom;
 
-    // Shift + Left Click on background: Start Marquee Selection Box
-    if (event.shiftKey && event.button === 0) {
-      isMarquee = true;
-      marqueeStart = { x: canvasX, y: canvasY };
-      marqueeCurrent = { x: canvasX, y: canvasY };
+    // 1. If an appliance tool is armed in the palette, stamp a new appliance and drag it
+    if (studio.activeTool && event.button === 0) {
+      const createdId = studio.addAppliance(studio.activeTool, canvasX, canvasY);
+      if (createdId && studio.project?.graph.nodes[createdId]) {
+        const node = studio.project.graph.nodes[createdId];
+        draggingNodeId = createdId;
+        dragOffset = { x: canvasX - node.x, y: canvasY - node.y };
+      }
       return;
     }
 
-    // Normal Left Click or Middle Click on background: Pan Canvas
-    if (event.button === 0 || event.button === 1) {
+    // 2. If clicking on an existing node group, node drag handler handles it
+    if ((event.target as HTMLElement).closest('.node-group')) {
+      return;
+    }
+
+    // 3. Middle-click, Space+Click, or Shift+Click: Pan Canvas
+    if (event.button === 1 || isSpacePressed || event.shiftKey) {
       isPanning = true;
       panStartX = event.clientX - studio.panX;
       panStartY = event.clientY - studio.panY;
+      return;
+    }
+
+    // 4. Normal Left-Click Drag on background: Marquee Selection Box
+    if (event.button === 0) {
+      isMarquee = true;
+      marqueeStart = { x: canvasX, y: canvasY };
+      marqueeCurrent = { x: canvasX, y: canvasY };
       studio.clearSelection();
     }
   }
@@ -155,9 +167,20 @@
   }
 </script>
 
+<svelte:window
+  onkeydown={(e) => {
+    if (e.code === 'Space') isSpacePressed = true;
+    if (e.key === 'Escape') studio.activeTool = null;
+  }}
+  onkeyup={(e) => {
+    if (e.code === 'Space') isSpacePressed = false;
+  }}
+/>
+
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
   class="canvas-container"
+  class:armed-cursor={studio.activeTool !== null}
   onwheel={handleWheel}
   onmousedown={handleMouseDown}
   onmousemove={handleMouseMove}
@@ -400,6 +423,14 @@
     overflow: hidden;
     background-color: #141820;
     user-select: none;
+  }
+
+  .canvas-container.armed-cursor {
+    cursor: crosshair;
+  }
+
+  .canvas-container.armed-cursor .schematic-svg {
+    cursor: crosshair;
   }
 
   .schematic-svg {

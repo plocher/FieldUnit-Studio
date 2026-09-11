@@ -4,7 +4,7 @@
   const rawComponents = [
     { id: 'turnout', name: 'Turnout', type: 'turnout', desc: 'Odd AAR switch appliance' },
     { id: 'crossover', name: 'Crossover', type: 'crossover', desc: 'Paired switch machines' },
-    { id: 'track', name: 'Track Net', type: 'track', desc: 'Auto-routed track line' },
+    { id: 'block', name: 'Block', type: 'block', desc: 'Track detection block with IRJ' },
     { id: 'irj', name: 'IRJ Joint', type: 'irj', desc: 'Insulated rail gap' },
     { id: 'sensor', name: 'Optical Sensor', type: 'sensor', desc: 'Frog fouling coverage' },
     { id: 'signal', name: 'Signal Mast', type: 'signal', desc: 'Wayside governing mast' },
@@ -53,15 +53,18 @@
   </div>
 
   <div class="palette-group">
-    <div class="group-label">RAW APPLIANCES (CLICK TO ADD)</div>
+    <div class="group-label">RAW APPLIANCES (CLICK TO ARM)</div>
     <div class="item-grid">
       {#each rawComponents as comp}
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
           class="palette-item"
+          class:armed={studio.activeTool === comp.id}
           title={comp.desc}
-          onclick={() => studio.addAppliance(comp.id)}
+          onclick={() => {
+            studio.activeTool = studio.activeTool === comp.id ? null : comp.id;
+          }}
         >
           <div class="item-icon-box">
             {#if comp.type === 'turnout'}
@@ -106,12 +109,20 @@
                 <text x="16" y="14" text-anchor="middle" fill="#fbbf24" font-size="8" font-family="monospace">d</text>
               </svg>
             {:else}
+              <!-- Detection Block Icon -->
               <svg width="32" height="22" viewBox="0 0 32 22">
-                <line x1="2" y1="11" x2="30" y2="11" stroke="#94a3b8" stroke-width="3" />
+                <line x1="2" y1="11" x2="30" y2="11" stroke="#38bdf8" stroke-width="2.5" />
+                <line x1="7" y1="5" x2="7" y2="17" stroke="#ef4444" stroke-width="1.8" />
+                <line x1="11" y1="5" x2="11" y2="17" stroke="#ef4444" stroke-width="1.8" />
               </svg>
             {/if}
           </div>
-          <div class="item-label">{comp.name}</div>
+          <div class="item-label">
+            {comp.name}
+            {#if studio.activeTool === comp.id}
+              <span class="armed-tag">ARMED</span>
+            {/if}
+          </div>
         </div>
       {/each}
     </div>
@@ -248,9 +259,17 @@
     transition: all 0.15s ease;
   }
 
-  .palette-item:hover {
-    background: #334155;
-    border-color: #0284c7;
+  .palette-item.armed {
+    background: #0369a1;
+    border-color: #38bdf8;
+  }
+
+  .armed-tag {
+    display: block;
+    font-size: 8px;
+    font-weight: 800;
+    color: #38bdf8;
+    margin-top: 2px;
   }
 
   .item-label {

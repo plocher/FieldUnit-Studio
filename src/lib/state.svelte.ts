@@ -38,6 +38,13 @@ export class StudioState {
   selectedRouteId = $state<string | null>(null);
   selectedApplianceId = $state<string | null>(null);
 
+  // Stateful Appliance Placement Tool (armed state from palette)
+  activeTool = $state<string | null>(null);
+
+  // Undo / Redo history
+  undoStack: string[] = [];
+  redoStack: string[] = [];
+
   // Panels
   isLeftSidebarOpen = $state<boolean>(true);
   isRightSidebarOpen = $state<boolean>(true);
@@ -54,34 +61,27 @@ export class StudioState {
       : null
   );
 
-  // Computed: Dynamic CP Bounding Box across ALL appliances in the plant
+  // Computed: Dynamic CP Bounding Box aligned to CP boundaries and all internal plant elements
   cpBounds = $derived.by(() => {
     if (!this.project) {
-      return { x: 200, y: 130, width: 400, height: 180, centerX: 400, bottomY: 310 };
+      return { x: 50, y: 120, width: 720, height: 210, centerX: 410, bottomY: 330 };
     }
 
-    // Include all internal appliances and joints belonging to the interlocking limits
-    const cpNodes = Object.values(this.project.graph.nodes).filter((node) => {
-      return 'SwitchPoints' in node.kind ||
-             'Irj' in node.kind ||
-             'Junction' in node.kind ||
-             'Bumper' in node.kind;
-    });
-
-    if (cpNodes.length === 0) {
-      return { x: 200, y: 130, width: 400, height: 180, centerX: 400, bottomY: 310 };
+    const allNodes = Object.values(this.project.graph.nodes);
+    if (allNodes.length === 0) {
+      return { x: 50, y: 120, width: 720, height: 210, centerX: 410, bottomY: 330 };
     }
 
-    const xs = cpNodes.map((n) => n.x);
-    const ys = cpNodes.map((n) => n.y);
+    const xs = allNodes.map((n) => n.x);
+    const ys = allNodes.map((n) => n.y);
 
-    const minX = Math.min(...xs);
-    const maxX = Math.max(...xs);
+    const minX = Math.min(...xs) - 16;
+    const maxX = Math.max(...xs) + 16;
     const minY = Math.min(...ys) - 45;
     const maxY = Math.max(...ys) + 45;
 
-    const width = Math.max(maxX - minX, 120);
-    const height = Math.max(maxY - minY, 90);
+    const width = Math.max(maxX - minX, 140);
+    const height = Math.max(maxY - minY, 100);
 
     return {
       x: minX,
@@ -93,12 +93,42 @@ export class StudioState {
     };
   });
 
+  saveSnapshot() {
+    if (!this.project) return;
+    this.undoStack.push(JSON.stringify(this.project));
+    if (this.undoStack.length > 50) this.undoStack.shift();
+    this.redoStack = [];
+  }
+
+  undo() {
+    if (this.undoStack.length === 0 || !this.project) return;
+    const current = JSON.stringify(this.project);
+    this.redoStack.push(current);
+    const previous = this.undoStack.pop()!;
+    this.project = JSON.parse(previous);
+    this.clearSelection();
+    this.runDrc();
+    this.synthesizeRoutes();
+  }
+
+  redo() {
+    if (this.redoStack.length === 0 || !this.project) return;
+    const current = JSON.stringify(this.project);
+    this.undoStack.push(current);
+    const next = this.redoStack.pop()!;
+    this.project = JSON.parse(next);
+    this.clearSelection();
+    this.runDrc();
+    this.synthesizeRoutes();
+  }
+
   async loadDemo() {
     try {
       const demo = await invoke<ProjectFile>('load_demo_project');
       this.project = demo;
-      this.selectedNodeId = null;
-      this.selectedNodeIds = [];
+      this.clearSelection();
+      this.undoStack = [];
+      this.redoStack = [];
       await this.runDrc();
     } catch (err) {
       console.error('Failed to load demo project:', err);
@@ -183,6 +213,26 @@ export class StudioState {
   clearSelection() {
     this.selectedNodeId = null;
     this.selectedNodeIds = [];
+  }
+
+  // KiCad-style 'U' key: extend selection group one level along connected edges
+  extendSelection() {
+    if (!this.project) return;
+    const current = new Set(
+      this.selectedNodeIds.length > 0
+        ? this.selectedNodeIds
+        : this.selectedNodeId
+        ? [this.selectedNodeId]
+        : []
+    );
+    if (current.size === 0) return;
+
+    const next = new Set(current);
+    for (const edge of this.project.graph.edges) {
+      if (current.has(edge.from)) next.add(edge.to);
+      if (current.has(edge.to)) next.add(edge.from);
+    }
+    this.selectedNodeIds = Array.from(next);
   }
 
   // Move node(s): moves all selected nodes together, or moves switch points cluster
@@ -352,6 +402,22 @@ export class StudioState {
     }
   }
 
+  // Tidy / Auto-Layout model board layout
+  autoArrange() {
+    if (!this.project) return;
+    this.saveSnapshot();
+
+    // Snap all horizontal main lines to y = 180, siding tracks to y = 280
+    for (const node of Object.values(this.project.graph.nodes)) {
+      if (node.id.includes('SIDING')) {
+        node.y = 280;
+      } else if (!node.id.includes('REV') && !node.id.includes('BUMPER')) {
+        node.y = 180;
+      }
+      node.x = Math.round(node.x / 20) * 20;
+    }
+  }
+
   toggleLayer(layer: keyof LayerVisibility) {
     this.layers = {
       ...this.layers,
@@ -360,12 +426,13 @@ export class StudioState {
   }
 
   // Appliance creation from palette (click or drop)
-  addAppliance(kind: string, targetX?: number, targetY?: number) {
-    if (!this.project) return;
+  addAppliance(kind: string, targetX?: number, targetY?: number): string | null {
+    if (!this.project) return null;
+    this.saveSnapshot();
 
     const cp = this.project.control_points[0];
-    const x = targetX ?? (400 - this.panX) / this.zoom;
-    const y = targetY ?? (200 - this.panY) / this.zoom;
+    const x = targetX ?? (420 - this.panX) / this.zoom;
+    const y = targetY ?? (220 - this.panY) / this.zoom;
     const roundedX = Math.round(x / 10) * 10;
     const roundedY = Math.round(y / 10) * 10;
 
@@ -373,6 +440,8 @@ export class StudioState {
     const nextOddSwitch = existingSwitches * 2 + 1;
     const existingSignals = cp.signal_masts.length;
     const nextEvenSignal = (existingSignals + 1) * 2;
+
+    let createdId: string | null = null;
 
     switch (kind) {
       case 'turnout': {
@@ -424,7 +493,7 @@ export class StudioState {
           reverse_sense_pin: null,
           island_circuit_id: `${swId}T`,
         });
-        this.selectedNodeId = nodePtsId;
+        createdId = nodePtsId;
         break;
       }
       case 'irj': {
@@ -435,6 +504,7 @@ export class StudioState {
           x: roundedX,
           y: roundedY,
         };
+        createdId = id;
         break;
       }
       case 'signal': {
@@ -452,6 +522,44 @@ export class StudioState {
         });
         break;
       }
+      case 'block': {
+        // Detection Block: creates a track segment bounded by an IRJ
+        const irjId = `IRJ_${Date.now().toString().slice(-4)}`;
+        const termId = `TERM_${Date.now().toString().slice(-4)}`;
+        const blockId = `${existingSwitches + 1}T`;
+
+        this.project.graph.nodes[irjId] = {
+          id: irjId,
+          kind: { Irj: { id: irjId, circuit_left: `${blockId}A`, circuit_right: blockId } },
+          x: roundedX,
+          y: roundedY,
+        };
+        this.project.graph.nodes[termId] = {
+          id: termId,
+          kind: { Junction: { id: termId } },
+          x: roundedX + 120,
+          y: roundedY,
+        };
+
+        this.project.graph.edges.push({
+          id: `E_${blockId}`,
+          from: irjId,
+          to: termId,
+          kind: { Tangent: { circuit_id: blockId } },
+          length_feet: 200,
+        });
+
+        cp.track_circuits.push({
+          id: blockId,
+          name: blockId,
+          is_island: false,
+          dropout_delay_ms: 100,
+          sensor_pin: null,
+          optical_pin: null,
+        });
+        createdId = irjId;
+        break;
+      }
       case 'bumper': {
         const id = `BUMPER_${Date.now().toString().slice(-4)}`;
         this.project.graph.nodes[id] = {
@@ -460,6 +568,7 @@ export class StudioState {
           x: roundedX,
           y: roundedY,
         };
+        createdId = id;
         break;
       }
       case 'boundary': {
@@ -470,11 +579,16 @@ export class StudioState {
           x: roundedX,
           y: roundedY,
         };
+        createdId = id;
         break;
       }
     }
 
+    if (createdId) {
+      this.selectNode(createdId, false);
+    }
     this.runDrc();
+    return createdId;
   }
 }
 
