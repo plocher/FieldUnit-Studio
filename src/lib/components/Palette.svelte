@@ -21,7 +21,7 @@
     { key: 'track', name: 'Track & Rails', keyHint: 'T', color: '#94a3b8' },
     { key: 'electrical', name: 'Electrical & IRJ', keyHint: 'E', color: '#ef4444' },
     { key: 'signals', name: 'Signal Masts', keyHint: 'S', color: '#22c55e' },
-    { key: 'speeds', name: 'Turnout Speeds', keyHint: 'R', color: '#f59e0b' },
+    { key: 'speeds', name: 'Turnout Speeds', keyHint: 'P', color: '#f59e0b' },
     { key: 'names', name: 'Nomenclature', keyHint: 'N', color: '#38bdf8' },
   ];
 </script>
@@ -142,10 +142,10 @@
 
   <div class="palette-group shortcuts-group">
     <div class="group-label">QUICK SHORTCUTS</div>
-    <div class="shortcut-row"><span class="key">A</span> Add Component</div>
-    <div class="shortcut-row"><span class="key">W</span> Wire Track Net</div>
-    <div class="shortcut-row"><span class="key">R</span> Rotate / Flip</div>
-    <div class="shortcut-row"><span class="key">M</span> Move (Rubberband)</div>
+    <div class="shortcut-row"><span class="key">R</span> Rotate / Flip Switch</div>
+    <div class="shortcut-row"><span class="key">U</span> Extend Selection</div>
+    <div class="shortcut-row"><span class="key">L</span> Tidy Model Board</div>
+    <div class="shortcut-row"><span class="key">X</span> Delete Selected</div>
   </div>
 </aside>
 

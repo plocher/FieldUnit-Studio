@@ -41,6 +41,7 @@ export class StudioState {
 
   // Stateful Appliance Placement Tool (armed state from palette)
   activeTool = $state<string | null>(null);
+  armedTurnoutOrientation = $state<'FacingEastDivergeDown' | 'FacingEastDivergeUp' | 'FacingWestDivergeDown' | 'FacingWestDivergeUp'>('FacingEastDivergeDown');
 
   // Undo / Redo history
   undoStack: string[] = [];
@@ -672,6 +673,102 @@ export class StudioState {
     }
   }
 
+  // Rotate / Flip a switch orientation through 4 quadrants:
+  // 1. Facing East, Diverge Down
+  // 2. Facing East, Diverge Up
+  // 3. Facing West, Diverge Down (Trailing)
+  // 4. Facing West, Diverge Up (Trailing)
+  rotateSelectedSwitch() {
+    if (!this.project) return;
+
+    // If Turnout tool is armed, cycle the orientation for placement
+    if (this.activeTool === 'turnout') {
+      const nextOrientation = {
+        FacingEastDivergeDown: 'FacingEastDivergeUp',
+        FacingEastDivergeUp: 'FacingWestDivergeDown',
+        FacingWestDivergeDown: 'FacingWestDivergeUp',
+        FacingWestDivergeUp: 'FacingEastDivergeDown',
+      } as const;
+      this.armedTurnoutOrientation = nextOrientation[this.armedTurnoutOrientation];
+      return;
+    }
+
+    // Otherwise, rotate currently selected switch
+    const cp = this.project.control_points[0];
+    let targetSwId: string | null = null;
+
+    if (this.selectedNodeId && this.project.graph.nodes[this.selectedNodeId]) {
+      const node = this.project.graph.nodes[this.selectedNodeId];
+      if ('SwitchPoints' in node.kind) {
+        targetSwId = node.kind.SwitchPoints.switch_id;
+      }
+    }
+
+    if (!targetSwId) {
+      for (const id of this.selectedNodeIds) {
+        const node = this.project.graph.nodes[id];
+        if (node && 'SwitchPoints' in node.kind) {
+          targetSwId = node.kind.SwitchPoints.switch_id;
+          break;
+        }
+      }
+    }
+
+    if (!targetSwId) return;
+    this.saveSnapshot();
+
+    const sw = cp.switches.find((s) => s.id === targetSwId);
+    if (!sw) return;
+
+    const currentOrient = sw.orientation || 'FacingEastDivergeDown';
+    const nextOrient = currentOrient === 'FacingEastDivergeDown' ? 'FacingEastDivergeUp' :
+                       currentOrient === 'FacingEastDivergeUp' ? 'FacingWestDivergeDown' :
+                       currentOrient === 'FacingWestDivergeDown' ? 'FacingWestDivergeUp' :
+                       'FacingEastDivergeDown';
+
+    sw.orientation = nextOrient;
+
+    // Find switch points node
+    const ptsNodeEntry = Object.entries(this.project.graph.nodes).find(
+      ([_, n]) => 'SwitchPoints' in n.kind && n.kind.SwitchPoints.switch_id === targetSwId
+    );
+    if (!ptsNodeEntry) return;
+    const [ptsId, ptsNode] = ptsNodeEntry;
+
+    // Calculate offsets based on orientation
+    let normDx = 100, normDy = 0;
+    let revDx = 100, revDy = 60;
+
+    switch (nextOrient) {
+      case 'FacingEastDivergeDown':
+        normDx = 100; normDy = 0; revDx = 100; revDy = 60;
+        break;
+      case 'FacingEastDivergeUp':
+        normDx = 100; normDy = 0; revDx = 100; revDy = -60;
+        break;
+      case 'FacingWestDivergeDown':
+        normDx = -100; normDy = 0; revDx = -100; revDy = 60;
+        break;
+      case 'FacingWestDivergeUp':
+        normDx = -100; normDy = 0; revDx = -100; revDy = -60;
+        break;
+    }
+
+    // Reposition unpinned reverse leg terminal / bumper
+    for (const edge of this.project.graph.edges) {
+      if (edge.from === ptsId && 'SwitchReverse' in edge.kind) {
+        const revNode = this.project.graph.nodes[edge.to];
+        if (revNode && ('Bumper' in revNode.kind || 'Junction' in revNode.kind)) {
+          revNode.x = ptsNode.x + revDx;
+          revNode.y = ptsNode.y + revDy;
+        }
+      }
+    }
+
+    this.runDrc();
+    this.synthesizeRoutes();
+  }
+
   // Tidy / Auto-Layout model board layout to exact AAR standards (0°, 45°, 90°)
   autoArrange() {
     if (!this.project) return;
@@ -734,6 +831,20 @@ export class StudioState {
         const nodeNormId = `SW${swId}_NORM`;
         const nodeRevBumperId = `BUMPER_SW${swId}`;
 
+        // Calculate branch vectors based on armed turnout orientation
+        let normDx = 100, normDy = 0;
+        let revDx = 100, revDy = 60;
+        switch (this.armedTurnoutOrientation) {
+          case 'FacingEastDivergeDown':
+            normDx = 100; normDy = 0; revDx = 100; revDy = 60; break;
+          case 'FacingEastDivergeUp':
+            normDx = 100; normDy = 0; revDx = 100; revDy = -60; break;
+          case 'FacingWestDivergeDown':
+            normDx = -100; normDy = 0; revDx = -100; revDy = 60; break;
+          case 'FacingWestDivergeUp':
+            normDx = -100; normDy = 0; revDx = -100; revDy = -60; break;
+        }
+
         this.project.graph.nodes[nodePtsId] = {
           id: nodePtsId,
           kind: { SwitchPoints: { switch_id: swId } },
@@ -743,14 +854,14 @@ export class StudioState {
         this.project.graph.nodes[nodeNormId] = {
           id: nodeNormId,
           kind: { Junction: { id: `J_${swId}_N` } },
-          x: roundedX + 100,
-          y: roundedY,
+          x: roundedX + normDx,
+          y: roundedY + normDy,
         };
         this.project.graph.nodes[nodeRevBumperId] = {
           id: nodeRevBumperId,
           kind: { Bumper: { id: nodeRevBumperId } },
-          x: roundedX + 100,
-          y: roundedY + 60,
+          x: roundedX + revDx,
+          y: roundedY + revDy,
         };
 
         this.project.graph.edges.push({
@@ -772,6 +883,7 @@ export class StudioState {
           id: swId,
           name: swId,
           speed: 'Slow',
+          orientation: this.armedTurnoutOrientation,
           motor_pin: null,
           normal_sense_pin: null,
           reverse_sense_pin: null,

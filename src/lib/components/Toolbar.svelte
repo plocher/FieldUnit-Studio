@@ -38,7 +38,7 @@
           <button class="dropdown-btn" onclick={() => studio.synthesizeRoutes()}>Synthesize Routes</button>
           <button class="dropdown-btn" onclick={() => studio.runDrc()}>Run DRC Validation</button>
           <hr class="menu-divider" />
-          <button class="dropdown-btn" onclick={() => studio.loadDemo()}>Reload Demo CP</button>
+          <button class="dropdown-btn" onclick={() => studio.loadDemo()}>Reload Demo CP (Reset)</button>
         </div>
       </div>
       <div class="menu-item dropdown">
@@ -49,18 +49,14 @@
           <button class="dropdown-btn" onclick={() => studio.zoomIn()}>Zoom In (+)</button>
           <button class="dropdown-btn" onclick={() => studio.zoomOut()}>Zoom Out (-)</button>
           <button class="dropdown-btn" onclick={() => studio.resetZoom()}>Fit Normal (100%)</button>
-          <hr class="menu-divider" />
-          <button class="dropdown-btn" onclick={() => (studio.isLeftSidebarOpen = !studio.isLeftSidebarOpen)}>
-            Toggle Palette
-          </button>
-          <button class="dropdown-btn" onclick={() => (studio.isRightSidebarOpen = !studio.isRightSidebarOpen)}>
-            Toggle Inspector
-          </button>
-          <button class="dropdown-btn" onclick={() => (studio.isBottomPanelOpen = !studio.isBottomPanelOpen)}>
-            Toggle Matrix Drawer
-          </button>
         </div>
       </div>
+      <button class="reset-header-btn" onclick={() => studio.loadDemo()} title="Reset canvas to pristine CP End-of-Siding layout">
+        ↺ Reload Demo
+      </button>
+      <button class="tidy-header-btn" onclick={() => studio.autoArrange()} title="Auto-align tracks horizontally and at 45 degrees">
+        ⎇ Tidy (L)
+      </button>
     </div>
 
     <!-- Project Identifier -->
@@ -195,6 +191,31 @@
   .subdivision-tag {
     color: #64748b;
     font-family: monospace;
+  }
+
+  .reset-header-btn,
+  .tidy-header-btn {
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #cbd5e1;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .reset-header-btn:hover {
+    background: #047857;
+    color: #ffffff;
+    border-color: #10b981;
+  }
+
+  .tidy-header-btn:hover {
+    background: #0284c7;
+    color: #ffffff;
+    border-color: #38bdf8;
   }
 
   /* Authentic Hanging File Folder Tabs */

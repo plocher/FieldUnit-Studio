@@ -40,6 +40,10 @@
         studio.toggleLayer('signals');
         break;
       case 'r':
+        // KiCad-style 'R' key: Rotate / Flip selected switch or armed turnout tool
+        studio.rotateSelectedSwitch();
+        break;
+      case 'p':
         studio.toggleLayer('speeds');
         break;
       case 'n':

@@ -72,6 +72,18 @@
               <span class="prop-val monospace">{sw?.id || swId}</span>
             </div>
             <div class="prop-row">
+              <span class="prop-label">Orientation:</span>
+              <span class="prop-val text-amber font-bold">
+                {sw?.orientation === 'FacingEastDivergeUp' ? 'Facing East (Up)' :
+                 sw?.orientation === 'FacingWestDivergeDown' ? 'Facing West (Down)' :
+                 sw?.orientation === 'FacingWestDivergeUp' ? 'Facing West (Up)' :
+                 'Facing East (Down)'}
+              </span>
+            </div>
+            <button class="rotate-btn" onclick={() => studio.rotateSelectedSwitch()}>
+              ⤹ Rotate / Flip (R)
+            </button>
+            <div class="prop-row" style="margin-top: 8px;">
               <span class="prop-label">Speed:</span>
               <select class="prop-select" bind:value={sw!.speed}>
                 {#each speeds as s}
@@ -250,5 +262,32 @@
   .delete-btn:hover {
     background: #dc2626;
     color: #ffffff;
+  }
+
+  .rotate-btn {
+    width: 100%;
+    margin-top: 4px;
+    background: #1e293b;
+    border: 1px solid #0284c7;
+    color: #38bdf8;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .rotate-btn:hover {
+    background: #0284c7;
+    color: #ffffff;
+  }
+
+  .text-amber {
+    color: #f59e0b;
+  }
+
+  .font-bold {
+    font-weight: 700;
   }
 </style>

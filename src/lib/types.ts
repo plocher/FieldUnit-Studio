@@ -10,10 +10,17 @@ export type Indication =
   | 'Approach'
   | 'Clear';
 
+export type SwitchOrientation =
+  | 'FacingEastDivergeDown'
+  | 'FacingEastDivergeUp'
+  | 'FacingWestDivergeDown'
+  | 'FacingWestDivergeUp';
+
 export interface Switch {
   id: string;
   name: string;
   speed: SpeedClass;
+  orientation?: SwitchOrientation;
   motor_pin?: number | null;
   normal_sense_pin?: number | null;
   reverse_sense_pin?: number | null;
