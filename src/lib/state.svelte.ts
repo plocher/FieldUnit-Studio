@@ -35,6 +35,7 @@ export class StudioState {
   // Selection
   selectedNodeId = $state<string | null>(null);
   selectedNodeIds = $state<string[]>([]);
+  selectedCircuitId = $state<string | null>(null);
   selectedRouteId = $state<string | null>(null);
   selectedApplianceId = $state<string | null>(null);
 
@@ -213,6 +214,26 @@ export class StudioState {
   clearSelection() {
     this.selectedNodeId = null;
     this.selectedNodeIds = [];
+    this.selectedCircuitId = null;
+  }
+
+  // Select entire Detection Block and its bounding IRJs
+  selectCircuit(circuitId: string) {
+    if (!this.project) return;
+    this.selectedCircuitId = circuitId;
+
+    // Find all bounding IRJs and nodes connected to this circuit
+    const boundingNodes: string[] = [];
+    for (const [id, node] of Object.entries(this.project.graph.nodes)) {
+      if ('Irj' in node.kind) {
+        if (node.kind.Irj.circuit_left === circuitId || node.kind.Irj.circuit_right === circuitId) {
+          boundingNodes.push(id);
+        }
+      }
+    }
+
+    this.selectedNodeIds = boundingNodes;
+    this.selectedNodeId = boundingNodes[0] || null;
   }
 
   // KiCad-style 'U' key: extend selection group one level along connected edges
@@ -309,7 +330,7 @@ export class StudioState {
     this.synthesizeRoutes();
   }
 
-  // Cleanly split an existing track edge and insert an IRJ node without creating extraneous nodes
+  // Cleanly split an existing track edge and insert an IRJ node with graceful horizontal expansion
   insertIrjOnEdge(edgeIndex: number, x: number, y: number): string | null {
     if (!this.project || edgeIndex < 0 || edgeIndex >= this.project.graph.edges.length) return null;
     this.saveSnapshot();
@@ -317,8 +338,16 @@ export class StudioState {
     const edge = this.project.graph.edges[edgeIndex];
     const snapX = Math.round(x / 10) * 10;
     const snapY = Math.round(y / 10) * 10;
-    const irjId = `IRJ_${Date.now().toString().slice(-4)}`;
+    const shiftDistance = 120;
 
+    // Graceful horizontal expansion: shift all downstream nodes to the right to make room
+    for (const node of Object.values(this.project.graph.nodes)) {
+      if (node.x >= snapX) {
+        node.x += shiftDistance;
+      }
+    }
+
+    const irjId = `IRJ_${Date.now().toString().slice(-4)}`;
     this.project.graph.nodes[irjId] = {
       id: irjId,
       kind: { Irj: { id: irjId, circuit_left: '1T', circuit_right: '2T' } },

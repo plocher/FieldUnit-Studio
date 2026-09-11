@@ -16,7 +16,32 @@
   {#if studio.project}
     {@const cp = studio.project.control_points[0]}
     <div class="inspector-content">
-      {#if studio.selectedNodeId && studio.project.graph.nodes[studio.selectedNodeId]}
+      {#if studio.selectedCircuitId}
+        {@const circuit = cp?.track_circuits.find((c) => c.id === studio.selectedCircuitId)}
+        <div class="prop-group">
+          <div class="group-title">DETECTION BLOCK (CIRCUIT)</div>
+          <div class="prop-row">
+            <span class="prop-label">Block ID:</span>
+            <span class="prop-val monospace">{studio.selectedCircuitId}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">Role:</span>
+            <span class="prop-val">{circuit?.is_island ? 'Island (OS Section)' : 'Block Circuit'}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">Dropout Delay:</span>
+            <span class="prop-val">{circuit?.dropout_delay_ms ?? (circuit?.is_island ? 2000 : 100)} ms</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">Current Pin:</span>
+            <input class="prop-input" type="number" placeholder="DCCOD pin" />
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">Optical Pin:</span>
+            <input class="prop-input" type="number" placeholder="Frog photodiode" />
+          </div>
+        </div>
+      {:else if studio.selectedNodeId && studio.project.graph.nodes[studio.selectedNodeId]}
         {@const node = studio.project.graph.nodes[studio.selectedNodeId]}
         <div class="prop-group">
           <div class="group-title">SELECTED NODE</div>

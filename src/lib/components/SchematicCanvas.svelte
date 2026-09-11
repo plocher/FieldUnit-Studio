@@ -280,43 +280,54 @@
             {@const fromNode = studio.project.graph.nodes[edge.from]}
             {@const toNode = studio.project.graph.nodes[edge.to]}
             {#if fromNode && toNode}
-              {@const isHighlighted = isEdgeInActiveRoute(edge)}
+              {@const circuitId = getEdgeCircuitId(edge)}
+              {@const isRouteHighlighted = isEdgeInActiveRoute(edge)}
+              {@const isCircuitSelected = studio.selectedCircuitId === circuitId}
               {@const midX = (fromNode.x + toNode.x) / 2}
               {@const midY = (fromNode.y + toNode.y) / 2}
-              {@const circuitId = getEdgeCircuitId(edge)}
 
-              <!-- Roadbed Shadow -->
-              <line
-                x1={fromNode.x}
-                y1={fromNode.y}
-                x2={toNode.x}
-                y2={toNode.y}
-                stroke="#090d16"
-                stroke-width="8"
-                stroke-linecap="round"
-              />
-              <!-- Steel Rails -->
-              <line
-                x1={fromNode.x}
-                y1={fromNode.y}
-                x2={toNode.x}
-                y2={toNode.y}
-                stroke={isHighlighted ? '#38bdf8' : '#94a3b8'}
-                stroke-width={isHighlighted ? 4 : 3}
-                stroke-linecap="round"
-                filter={isHighlighted ? 'url(#route-glow)' : 'none'}
-              />
+              <!-- svelte-ignore a11y_click_events_have_key_events -->
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
+              <g
+                class="clickable-track"
+                onclick={(e) => {
+                  e.stopPropagation();
+                  if (circuitId) studio.selectCircuit(circuitId);
+                }}
+              >
+                <!-- Roadbed Shadow -->
+                <line
+                  x1={fromNode.x}
+                  y1={fromNode.y}
+                  x2={toNode.x}
+                  y2={toNode.y}
+                  stroke="#090d16"
+                  stroke-width="8"
+                  stroke-linecap="round"
+                />
+                <!-- Steel Rails -->
+                <line
+                  x1={fromNode.x}
+                  y1={fromNode.y}
+                  x2={toNode.x}
+                  y2={toNode.y}
+                  stroke={isRouteHighlighted || isCircuitSelected ? '#38bdf8' : '#94a3b8'}
+                  stroke-width={isRouteHighlighted || isCircuitSelected ? 4 : 3}
+                  stroke-linecap="round"
+                  filter={isRouteHighlighted || isCircuitSelected ? 'url(#route-glow)' : 'none'}
+                />
 
-              <!-- Block Names in clean dark bubble with RED text (only on primary straight segments, not duplicated) -->
-              <g opacity={studio.layers.electrical ? 1.0 : 0.3}>
-                {#if circuitId && (edge.id === 'E_APP' || edge.id === 'E_NORM' || edge.id === 'E_EXIT_MAIN' || edge.id === 'E_EXIT_SIDING')}
-                  <g transform="translate({midX}, {midY})">
-                    <rect x="-16" y="-8" width="32" height="16" rx="3" fill="#0f172a" stroke="#334155" stroke-width="1" />
-                    <text x="0" y="4" text-anchor="middle" fill="#ef4444" font-size="10" font-family="monospace" font-weight="700">
-                      {circuitId}
-                    </text>
-                  </g>
-                {/if}
+                <!-- Block Names in clean dark bubble with RED text (only on primary straight segments, not duplicated) -->
+                <g opacity={studio.layers.electrical ? 1.0 : 0.3}>
+                  {#if circuitId && (edge.id === 'E_APP' || edge.id === 'E_NORM' || edge.id === 'E_EXIT_MAIN' || edge.id === 'E_EXIT_SIDING')}
+                    <g transform="translate({midX}, {midY})">
+                      <rect x="-16" y="-8" width="32" height="16" rx="3" fill="#0f172a" stroke={isCircuitSelected ? '#38bdf8' : '#334155'} stroke-width={isCircuitSelected ? 1.5 : 1} />
+                      <text x="0" y="4" text-anchor="middle" fill="#ef4444" font-size="10" font-family="monospace" font-weight="700">
+                        {circuitId}
+                      </text>
+                    </g>
+                  {/if}
+                </g>
               </g>
             {/if}
           {/each}
@@ -489,6 +500,14 @@
   .node-group:hover circle,
   .node-group:hover rect {
     filter: brightness(1.2);
+  }
+
+  .clickable-track {
+    cursor: pointer;
+  }
+
+  .clickable-track:hover line {
+    filter: drop-shadow(0 0 3px #38bdf8);
   }
 
   .hud-overlay {
