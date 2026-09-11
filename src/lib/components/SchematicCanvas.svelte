@@ -31,6 +31,21 @@
     } else if (draggingNodeId && studio.project) {
       const rect = svgElement?.getBoundingClientRect();
       if (!rect) return;
+
+      // Auto-pan viewport when dragging near edges
+      const edgeMargin = 50;
+      const panSpeed = 8;
+      if (event.clientX < rect.left + edgeMargin) {
+        studio.panX += panSpeed;
+      } else if (event.clientX > rect.right - edgeMargin) {
+        studio.panX -= panSpeed;
+      }
+      if (event.clientY < rect.top + edgeMargin) {
+        studio.panY += panSpeed;
+      } else if (event.clientY > rect.bottom - edgeMargin) {
+        studio.panY -= panSpeed;
+      }
+
       const mouseX = (event.clientX - rect.left - studio.panX) / studio.zoom;
       const mouseY = (event.clientY - rect.top - studio.panY) / studio.zoom;
       studio.updateNodePosition(draggingNodeId, mouseX - dragOffset.x, mouseY - dragOffset.y);
@@ -113,7 +128,7 @@
           stroke-dasharray="6 4"
         />
         <!-- Centered CP Name at Bottom of CP Box -->
-        <g opacity={studio.layers.names ? 1.0 : 0.15}>
+        <g opacity={studio.layers.names ? 1.0 : 0.3}>
           <text
             x={studio.cpBounds.centerX}
             y={studio.cpBounds.bottomY - 10}
@@ -128,7 +143,7 @@
         </g>
 
         <!-- 1. Track Layer (Edges / Rails) - Bright or Dimmed -->
-        <g opacity={studio.layers.track ? 1.0 : 0.15}>
+        <g opacity={studio.layers.track ? 1.0 : 0.3}>
           {#each studio.project.graph.edges as edge}
             {@const fromNode = studio.project.graph.nodes[edge.from]}
             {@const toNode = studio.project.graph.nodes[edge.to]}
@@ -161,7 +176,7 @@
               />
 
               <!-- Block Names in clean dark bubble with RED text (only on primary straight segments, not duplicated) -->
-              <g opacity={studio.layers.electrical ? 1.0 : 0.15}>
+              <g opacity={studio.layers.electrical ? 1.0 : 0.3}>
                 {#if circuitId && (edge.id === 'E_APP' || edge.id === 'E_NORM' || edge.id === 'E_EXIT_MAIN' || edge.id === 'E_EXIT_SIDING')}
                   <g transform="translate({midX}, {midY})">
                     <rect x="-16" y="-8" width="32" height="16" rx="3" fill="#0f172a" stroke="#334155" stroke-width="1" />
@@ -187,27 +202,27 @@
               <!-- CP Boundary Limit Marker -->
               <rect x="-8" y="-14" width="16" height="28" rx="2" fill="#3b82f6" fill-opacity="0.2" stroke="#60a5fa" stroke-width="1.5" />
               <line x1="0" y1="-14" x2="0" y2="14" stroke="#60a5fa" stroke-width="2" />
-              <g opacity={studio.layers.names ? 1.0 : 0.15}>
+              <g opacity={studio.layers.names ? 1.0 : 0.3}>
                 <text x="0" y="24" text-anchor="middle" fill="#93c5fd" font-size="10" font-weight="600">
                   {node.kind.Boundary.boundary_id}
                 </text>
               </g>
             {:else if 'Irj' in node.kind}
               <!-- Insulated Rail Joint Symbol ][ -->
-              <g opacity={studio.layers.electrical ? 1.0 : 0.15}>
+              <g opacity={studio.layers.electrical ? 1.0 : 0.3}>
                 <line x1="-3" y1="-10" x2="-3" y2="10" stroke="#ef4444" stroke-width="2.5" />
                 <line x1="3" y1="-10" x2="3" y2="10" stroke="#ef4444" stroke-width="2.5" />
               </g>
             {:else if 'SwitchPoints' in node.kind}
               <!-- Switch Points Node: Subtle speed colored aura and clean identifier "1 [MED]" -->
-              <g opacity={studio.layers.speeds ? 1.0 : 0.15}>
+              <g opacity={studio.layers.speeds ? 1.0 : 0.3}>
                 <circle cx="0" cy="0" r="14" fill="#f59e0b" fill-opacity="0.2" />
               </g>
               <circle cx="0" cy="0" r="5" fill="#f59e0b" stroke="#ffffff" stroke-width="1.5" />
-              <g opacity={studio.layers.names ? 1.0 : 0.15}>
+              <g opacity={studio.layers.names ? 1.0 : 0.3}>
                 <text x="0" y="-12" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="bold">
                   {node.kind.SwitchPoints.switch_id}
-                  <tspan fill="#f59e0b" font-size="9" font-weight="600" opacity={studio.layers.speeds ? 1.0 : 0.15}>[MED]</tspan>
+                  <tspan fill="#f59e0b" font-size="9" font-weight="600" opacity={studio.layers.speeds ? 1.0 : 0.3}>[MED]</tspan>
                 </text>
               </g>
             {:else if 'Junction' in node.kind}
@@ -224,7 +239,7 @@
         {/each}
 
         <!-- 3. Signal Layer (Horizontal Heads with Symmetrical Base Centered on Mast Arm) -->
-        <g opacity={studio.layers.signals ? 1.0 : 0.15}>
+        <g opacity={studio.layers.signals ? 1.0 : 0.3}>
           {#each studio.project.control_points as cp}
             {#each cp.signal_masts as mast}
               {@const irjNode = mast.irj_node_id ? studio.project.graph.nodes[mast.irj_node_id] : null}
@@ -246,7 +261,7 @@
                       <circle cx="30" cy="22" r="3.5" fill="#22c55e" stroke="#000000" stroke-width="0.8" />
 
                       <!-- Signal Name cleanly below capsule, no overlap -->
-                      <g opacity={studio.layers.names ? 1.0 : 0.15}>
+                      <g opacity={studio.layers.names ? 1.0 : 0.3}>
                         <text x="26" y="44" text-anchor="middle" fill="#f8fafc" font-size="10" font-weight="700">
                           {mast.name}
                         </text>
@@ -272,7 +287,7 @@
                       {/if}
 
                       <!-- Signal Name cleanly above capsule, no overlap -->
-                      <g opacity={studio.layers.names ? 1.0 : 0.15}>
+                      <g opacity={studio.layers.names ? 1.0 : 0.3}>
                         <text x={mast.mast_type === 'TwoHead' ? -26 : -18} y="-36" text-anchor="middle" fill="#f8fafc" font-size="10" font-weight="700">
                           {mast.name}
                         </text>

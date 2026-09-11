@@ -41,7 +41,7 @@
             <div class="group-title">SWITCH APPLIANCE</div>
             <div class="prop-row">
               <span class="prop-label">AAR ID:</span>
-              <span class="prop-val monospace">{sw?.id || swId} (ODD)</span>
+              <span class="prop-val monospace">{sw?.id || swId}</span>
             </div>
             <div class="prop-row">
               <span class="prop-label">Speed:</span>

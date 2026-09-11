@@ -155,7 +155,7 @@ export class StudioState {
     }
   }
 
-  // Snap and merge dragged node into a nearby target node (within 22px)
+  // Snap and merge dragged node into a nearby target node (within 24px)
   snapAndMerge(draggedId: string) {
     if (!this.project || !this.project.graph.nodes[draggedId]) return;
     const draggedNode = this.project.graph.nodes[draggedId];
@@ -164,23 +164,56 @@ export class StudioState {
     for (const [targetId, targetNode] of Object.entries(this.project.graph.nodes)) {
       if (targetId === draggedId) continue;
       const dist = Math.hypot(draggedNode.x - targetNode.x, draggedNode.y - targetNode.y);
-      if (dist <= 22) {
-        // Snap to target coordinates
-        draggedNode.x = targetNode.x;
-        draggedNode.y = targetNode.y;
+      if (dist <= 24) {
+        // Case 1: Dragging SwitchPoints onto a Boundary (extending track with a new switch)
+        if ('SwitchPoints' in draggedNode.kind && 'Boundary' in targetNode.kind) {
+          const swId = draggedNode.kind.SwitchPoints.switch_id;
+          const normLegId = `SW${swId}_NORM`;
+          const normLeg = this.project.graph.nodes[normLegId];
 
-        // Re-route all edges from/to draggedId to targetId
-        for (const edge of this.project.graph.edges) {
-          if (edge.from === draggedId) {
-            edge.from = targetId;
+          // Re-route incoming edges that previously terminated at boundary to the switch points
+          for (const edge of this.project.graph.edges) {
+            if (edge.to === targetId) {
+              edge.to = draggedId;
+            }
           }
-          if (edge.to === draggedId) {
-            edge.to = targetId;
+
+          // Move the boundary to the end of the normal leg
+          if (normLeg) {
+            targetNode.x = normLeg.x;
+            targetNode.y = normLeg.y;
+
+            // Re-route the switch normal edge to terminate at the boundary
+            for (const edge of this.project.graph.edges) {
+              if (edge.to === normLegId) {
+                edge.to = targetId;
+              }
+            }
+            delete this.project.graph.nodes[normLegId];
           }
+
+          this.selectedNodeId = draggedId;
+          this.runDrc();
+          this.synthesizeRoutes();
+          break;
         }
 
-        // Delete the duplicate dragged node
-        delete this.project.graph.nodes[draggedId];
+        // Case 2: Dragging a leg junction onto an existing node
+        if ('Junction' in draggedNode.kind) {
+          for (const edge of this.project.graph.edges) {
+            if (edge.from === draggedId) edge.from = targetId;
+            if (edge.to === draggedId) edge.to = targetId;
+          }
+          delete this.project.graph.nodes[draggedId];
+          this.selectedNodeId = targetId;
+          this.runDrc();
+          this.synthesizeRoutes();
+          break;
+        }
+
+        // Case 3: General node snap
+        draggedNode.x = targetNode.x;
+        draggedNode.y = targetNode.y;
         this.selectedNodeId = targetId;
         this.runDrc();
         this.synthesizeRoutes();
