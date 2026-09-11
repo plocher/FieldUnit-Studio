@@ -10,225 +10,227 @@
   ];
 </script>
 
-<header class="app-toolbar">
-  <!-- Brand & Project Title -->
-  <div class="toolbar-section brand-section">
-    <div class="logo-mark">FU</div>
-    <div>
-      <div class="app-title">FieldUnit Studio</div>
-      <div class="project-subtitle">
-        {studio.project ? `${studio.project.metadata.name} (${studio.project.metadata.subdivision})` : 'No Project Loaded'}
+<header class="app-header">
+  <!-- Top Menu Bar -->
+  <div class="menu-bar">
+    <div class="menu-left">
+      <div class="logo-mark">FU</div>
+      <div class="menu-item dropdown">
+        <span class="menu-label">Interlocking</span>
+        <div class="dropdown-menu">
+          <button class="dropdown-btn" onclick={() => studio.synthesizeRoutes()}>Synthesize Routes</button>
+          <button class="dropdown-btn" onclick={() => studio.runDrc()}>Run DRC Validation</button>
+          <hr class="menu-divider" />
+          <button class="dropdown-btn" onclick={() => studio.loadDemo()}>Reload Demo CP</button>
+        </div>
       </div>
+      <div class="menu-item dropdown">
+        <span class="menu-label">View</span>
+        <div class="dropdown-menu">
+          <button class="dropdown-btn" onclick={() => studio.zoomIn()}>Zoom In (+)</button>
+          <button class="dropdown-btn" onclick={() => studio.zoomOut()}>Zoom Out (-)</button>
+          <button class="dropdown-btn" onclick={() => studio.resetZoom()}>Fit Normal (100%)</button>
+          <hr class="menu-divider" />
+          <button class="dropdown-btn" onclick={() => (studio.isLeftSidebarOpen = !studio.isLeftSidebarOpen)}>
+            Toggle Palette
+          </button>
+          <button class="dropdown-btn" onclick={() => (studio.isRightSidebarOpen = !studio.isRightSidebarOpen)}>
+            Toggle Inspector
+          </button>
+          <button class="dropdown-btn" onclick={() => (studio.isBottomPanelOpen = !studio.isBottomPanelOpen)}>
+            Toggle Matrix Drawer
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Project Identifier -->
+    <div class="menu-right">
+      <span class="project-name">
+        {studio.project ? studio.project.metadata.name : 'FieldUnit Studio'}
+      </span>
+      <span class="subdivision-tag">
+        {studio.project ? studio.project.metadata.subdivision : 'No Project'}
+      </span>
     </div>
   </div>
 
-  <!-- Workspace Mode Switcher -->
-  <div class="toolbar-section mode-switcher">
+  <!-- Hanging File Folder Tabs -->
+  <div class="folder-tabs-strip">
     {#each modes as mode}
       <button
-        class="mode-btn"
+        class="folder-tab"
         class:active={studio.workspaceMode === mode.id}
         onclick={() => (studio.workspaceMode = mode.id)}
       >
-        {mode.label}
+        <span class="tab-label">{mode.label}</span>
       </button>
     {/each}
-  </div>
-
-  <!-- Layer Toggles -->
-  <div class="toolbar-section layer-toggles">
-    <button
-      class="tool-btn layer-btn"
-      class:active={studio.layers.track}
-      onclick={() => studio.toggleLayer('track')}
-      title="Toggle Track Layer [T]"
-    >
-      T: Track
-    </button>
-    <button
-      class="tool-btn layer-btn"
-      class:active={studio.layers.electrical}
-      onclick={() => studio.toggleLayer('electrical')}
-      title="Toggle Electrical Layer [E]"
-    >
-      E: Elec
-    </button>
-    <button
-      class="tool-btn layer-btn"
-      class:active={studio.layers.signals}
-      onclick={() => studio.toggleLayer('signals')}
-      title="Toggle Signal Layer [S]"
-    >
-      S: Signals
-    </button>
-    <button
-      class="tool-btn layer-btn"
-      class:active={studio.layers.speeds}
-      onclick={() => studio.toggleLayer('speeds')}
-      title="Toggle Speed Layer [R]"
-    >
-      R: Speeds
-    </button>
-    <button
-      class="tool-btn layer-btn"
-      class:active={studio.layers.names}
-      onclick={() => studio.toggleLayer('names')}
-      title="Toggle Names Layer [N]"
-    >
-      N: Names
-    </button>
-  </div>
-
-  <!-- Actions -->
-  <div class="toolbar-section actions-section">
-    <button class="action-btn demo-btn" onclick={() => studio.loadDemo()}>
-      Load Demo CP
-    </button>
-    <button class="action-btn" onclick={() => studio.synthesizeRoutes()}>
-      Synthesize
-    </button>
-    <button class="action-btn" onclick={() => studio.runDrc()}>
-      Run DRC
-    </button>
-    <div class="zoom-controls">
-      <button class="icon-btn" onclick={() => studio.zoomOut()} title="Zoom Out">-</button>
-      <button class="icon-btn" onclick={() => studio.resetZoom()} title="Fit View">100%</button>
-      <button class="icon-btn" onclick={() => studio.zoomIn()} title="Zoom In">+</button>
-    </div>
   </div>
 </header>
 
 <style>
-  .app-toolbar {
-    height: 52px;
-    background-color: #0f172a;
-    border-bottom: 1px solid #1e293b;
+  .app-header {
+    background-color: #0b0f17;
+    border-bottom: 2px solid #1e293b;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 16px;
-    color: #e2e8f0;
+    flex-direction: column;
     user-select: none;
   }
 
-  .toolbar-section {
+  .menu-bar {
+    height: 34px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: space-between;
+    padding: 0 14px;
+    border-bottom: 1px solid #161f2e;
+    font-size: 11px;
   }
 
-  .brand-section {
-    gap: 12px;
+  .menu-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
   }
 
   .logo-mark {
-    width: 30px;
-    height: 30px;
-    border-radius: 6px;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
     background: linear-gradient(135deg, #0284c7, #0369a1);
     color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 800;
-    font-size: 13px;
-    letter-spacing: -0.5px;
+    font-size: 10px;
   }
 
-  .app-title {
-    font-size: 13px;
-    font-weight: 700;
+  .menu-item {
+    position: relative;
+    cursor: pointer;
+  }
+
+  .menu-label {
+    color: #94a3b8;
+    font-weight: 500;
+    padding: 4px 6px;
+    border-radius: 3px;
+  }
+
+  .menu-label:hover {
     color: #f8fafc;
-  }
-
-  .project-subtitle {
-    font-size: 11px;
-    color: #64748b;
-  }
-
-  .mode-switcher {
     background: #1e293b;
-    padding: 3px;
-    border-radius: 6px;
   }
 
-  .mode-btn {
+  .dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: #182234;
+    border: 1px solid #334155;
+    border-radius: 4px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+    min-width: 160px;
+    z-index: 1000;
+    padding: 4px 0;
+  }
+
+  .dropdown:hover .dropdown-menu {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .dropdown-btn {
     background: transparent;
     border: none;
-    color: #94a3b8;
-    padding: 5px 12px;
-    font-size: 12px;
-    font-weight: 500;
-    border-radius: 4px;
+    text-align: left;
+    padding: 6px 12px;
+    font-size: 11px;
+    color: #cbd5e1;
     cursor: pointer;
-    transition: all 0.15s ease;
   }
 
-  .mode-btn.active {
+  .dropdown-btn:hover {
     background: #0284c7;
     color: #ffffff;
-    font-weight: 600;
   }
 
-  .tool-btn {
-    background: #1e293b;
-    border: 1px solid #334155;
-    color: #94a3b8;
-    padding: 4px 8px;
-    font-size: 11px;
-    font-weight: 600;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-
-  .layer-btn.active {
-    background: #0369a1;
-    border-color: #38bdf8;
-    color: #ffffff;
-  }
-
-  .action-btn {
-    background: #1e293b;
-    border: 1px solid #334155;
-    color: #e2e8f0;
-    padding: 5px 10px;
-    font-size: 11px;
-    font-weight: 600;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-
-  .action-btn:hover {
-    background: #334155;
-  }
-
-  .demo-btn {
-    background: #10b981;
-    border-color: #059669;
-    color: #ffffff;
-  }
-
-  .demo-btn:hover {
-    background: #059669;
-  }
-
-  .zoom-controls {
-    display: flex;
-    background: #1e293b;
-    border-radius: 4px;
-    overflow: hidden;
-  }
-
-  .icon-btn {
-    background: transparent;
+  .menu-divider {
     border: none;
-    color: #cbd5e1;
-    padding: 4px 8px;
-    font-size: 11px;
-    cursor: pointer;
+    border-top: 1px solid #334155;
+    margin: 4px 0;
   }
 
-  .icon-btn:hover {
-    background: #334155;
+  .menu-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .project-name {
+    color: #f1f5f9;
+    font-weight: 600;
+  }
+
+  .subdivision-tag {
+    color: #64748b;
+    font-family: monospace;
+  }
+
+  /* Authentic Hanging File Folder Tabs */
+  .folder-tabs-strip {
+    display: flex;
+    padding: 0 16px;
+    background: #0b0f17;
+    gap: 4px;
+    margin-top: 2px;
+  }
+
+  .folder-tab {
+    position: relative;
+    background: #151e2c;
+    border: 1px solid #243044;
+    border-bottom: none;
+    color: #94a3b8;
+    padding: 7px 18px 6px;
+    font-size: 11px;
+    font-weight: 600;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    cursor: pointer;
+    transition: all 0.12s ease;
+  }
+
+  .folder-tab:hover {
+    color: #f1f5f9;
+    background: #1c2738;
+  }
+
+  .folder-tab.active {
+    background: #1e293b;
+    color: #ffffff;
+    border-color: #38bdf8;
+    border-bottom: 2px solid #1e293b;
+    margin-bottom: -2px;
+    z-index: 10;
+  }
+
+  .folder-tab.active::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: #38bdf8;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+  }
+
+  .tab-label {
+    letter-spacing: 0.3px;
   }
 </style>

@@ -15,24 +15,27 @@ fn load_demo_project() -> Result<ProjectFile, String> {
     let mut project = ProjectFile::new("Coast Division Demo", "Santa Cruz Branch");
     let mut cp = ControlPoint::new("CP_END_SIDING", "CP End of Siding", "Santa Cruz Branch");
 
-    // Add appliances
+    // Add appliances (Southern Pacific / Western nomenclature)
     cp.switches.push(Switch::new("SW1", "Switch 1"));
     cp.track_circuits.push(TrackCircuit::new("1T1", "Island 1T1", true));
     cp.track_circuits.push(TrackCircuit::new("1SA", "Approach West", false));
     cp.track_circuits.push(TrackCircuit::new("1NA", "Main Exit East", false));
     cp.track_circuits.push(TrackCircuit::new("2NA", "Siding Exit East", false));
 
-    let mut mast2r = SignalMast::new("2R", "Signal 2R", MastType::TwoHead, Direction::Right);
-    mast2r.irj_node_id = Some("IRJ_WEST".to_string());
-    cp.signal_masts.push(mast2r);
+    // 2Sab: 2-Head Southbound Mast (Top: Main 2Sa, Lower: Siding 2Sb)
+    let mut mast2sab = SignalMast::new("2Sab", "Signal 2Sab", MastType::TwoHead, Direction::Right);
+    mast2sab.irj_node_id = Some("IRJ_WEST".to_string());
+    cp.signal_masts.push(mast2sab);
 
-    let mut mast2la = SignalMast::new("2LA", "Signal 2LA", MastType::Dwarf, Direction::Left);
-    mast2la.irj_node_id = Some("IRJ_EAST_MAIN".to_string());
-    cp.signal_masts.push(mast2la);
+    // 2Nab: 2-Head Northbound Mast on Main (Heads a & b)
+    let mut mast2nab = SignalMast::new("2Nab", "Signal 2Nab", MastType::TwoHead, Direction::Left);
+    mast2nab.irj_node_id = Some("IRJ_EAST_MAIN".to_string());
+    cp.signal_masts.push(mast2nab);
 
-    let mut mast2lb = SignalMast::new("2LB", "Signal 2LB", MastType::Dwarf, Direction::Left);
-    mast2lb.irj_node_id = Some("IRJ_EAST_SIDING".to_string());
-    cp.signal_masts.push(mast2lb);
+    // 2Nc: Dwarf Signal on Siding (Head c)
+    let mut mast2nc = SignalMast::new("2Nc", "Signal 2Nc", MastType::Dwarf, Direction::Left);
+    mast2nc.irj_node_id = Some("IRJ_EAST_SIDING".to_string());
+    cp.signal_masts.push(mast2nc);
 
     cp.boundaries.push(CpBoundary {
         id: "B_WEST".to_string(),

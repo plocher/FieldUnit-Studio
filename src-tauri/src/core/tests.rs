@@ -67,9 +67,9 @@ fn test_route_synthesis_end_of_siding() {
     cp.track_circuits.push(TrackCircuit::new("1NA", "Main Exit East", false));
     cp.track_circuits.push(TrackCircuit::new("2NA", "Siding Exit East", false));
 
-    let mut mast2r = SignalMast::new("2R", "Signal 2R", MastType::TwoHead, Direction::Right);
-    mast2r.irj_node_id = Some("IRJ_WEST".to_string());
-    cp.signal_masts.push(mast2r);
+    let mut mast2sab = SignalMast::new("2Sab", "Signal 2Sab", MastType::TwoHead, Direction::Right);
+    mast2sab.irj_node_id = Some("IRJ_WEST".to_string());
+    cp.signal_masts.push(mast2sab);
 
     cp.boundaries.push(CpBoundary {
         id: "B_WEST".to_string(),

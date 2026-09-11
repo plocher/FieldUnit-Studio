@@ -17,8 +17,7 @@
   }
 
   function handleMouseDown(event: MouseEvent) {
-    // If middle click or space bar pressed, start panning
-    if (event.button === 1 || event.button === 0 && (event.target as HTMLElement).tagName === 'svg') {
+    if (event.button === 1 || (event.button === 0 && (event.target as HTMLElement).tagName === 'svg')) {
       isPanning = true;
       panStartX = event.clientX - studio.panX;
       panStartY = event.clientY - studio.panY;
@@ -54,53 +53,64 @@
     dragOffset = { x: mouseX - node.x, y: mouseY - node.y };
   }
 
+  function getEdgeCircuitId(edge: TrackEdge): string {
+    if ('Tangent' in edge.kind) return edge.kind.Tangent.circuit_id;
+    if ('SwitchNormal' in edge.kind) return edge.kind.SwitchNormal.circuit_id;
+    if ('SwitchReverse' in edge.kind) return edge.kind.SwitchReverse.circuit_id;
+    return '';
+  }
+
   function isEdgeInActiveRoute(edge: TrackEdge): boolean {
     if (!studio.activeRoute) return false;
-    return studio.activeRoute.clears_circuits.some(
-      (c) => edge.kind && ('Tangent' in edge.kind && edge.kind.Tangent.circuit_id === c ||
-                           'SwitchNormal' in edge.kind && edge.kind.SwitchNormal.circuit_id === c ||
-                           'SwitchReverse' in edge.kind && edge.kind.SwitchReverse.circuit_id === c)
-    );
+    const cId = getEdgeCircuitId(edge);
+    return studio.activeRoute.clears_circuits.includes(cId);
   }
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="canvas-container" onwheel={handleWheel} onmousedown={handleMouseDown} onmousemove={handleMouseMove} onmouseup={handleMouseUp}>
+<div
+  class="canvas-container"
+  onwheel={handleWheel}
+  onmousedown={handleMouseDown}
+  onmousemove={handleMouseMove}
+  onmouseup={handleMouseUp}
+>
   <svg bind:this={svgElement} class="schematic-svg">
     <defs>
-      <!-- Subtle dot grid pattern -->
+      <!-- Dot grid pattern -->
       <pattern id="grid-dots" width="20" height="20" patternUnits="userSpaceOnUse">
         <circle cx="2" cy="2" r="1" fill="#333b47" />
       </pattern>
-      <!-- Glow filter for active route -->
+      <!-- Active route glow filter -->
       <filter id="route-glow" x="-20%" y="-20%" width="140%" height="140%">
         <feGaussianBlur stdDeviation="4" result="blur" />
         <feComposite in="SourceGraphic" in2="blur" operator="over" />
       </filter>
     </defs>
 
-    <!-- Background Grid -->
-    <rect width="100%" height="100%" fill="#181c24" />
+    <!-- Canvas Background -->
+    <rect width="100%" height="100%" fill="#141820" />
     <g transform="translate({studio.panX}, {studio.panY}) scale({studio.zoom})">
-      <rect x="-2000" y="-2000" width="4000" height="4000" fill="url(#grid-dots)" opacity="0.8" />
+      <rect x="-3000" y="-3000" width="6000" height="6000" fill="url(#grid-dots)" opacity="0.8" />
 
       {#if studio.project}
-        <!-- Control Point Boundary Halo Underlay (Verified Milestone = Soft Green) -->
+        <!-- Control Point Boundary Box -->
+        <!-- Extends to slightly less than half of boundary IRJs (x: 222 to 578) -->
         <rect
-          x="180"
-          y="100"
-          width="440"
-          height="220"
-          rx="12"
+          x="222"
+          y="130"
+          width="356"
+          height="190"
+          rx="8"
           fill="#10b981"
           fill-opacity="0.04"
           stroke="#10b981"
-          stroke-opacity="0.3"
+          stroke-opacity="0.35"
           stroke-width="1.5"
-          stroke-dasharray="4 4"
+          stroke-dasharray="5 5"
         />
         {#if studio.layers.names}
-          <text x="195" y="125" fill="#10b981" font-size="12" font-weight="600" opacity="0.8">
+          <text x="232" y="148" fill="#10b981" font-size="11" font-weight="700" letter-spacing="0.5">
             CP END OF SIDING [VERIFIED]
           </text>
         {/if}
@@ -112,17 +122,21 @@
             {@const toNode = studio.project.graph.nodes[edge.to]}
             {#if fromNode && toNode}
               {@const isHighlighted = isEdgeInActiveRoute(edge)}
-              <!-- Track shadow/bed -->
+              {@const midX = (fromNode.x + toNode.x) / 2}
+              {@const midY = (fromNode.y + toNode.y) / 2}
+              {@const circuitId = getEdgeCircuitId(edge)}
+
+              <!-- Roadbed Shadow -->
               <line
                 x1={fromNode.x}
                 y1={fromNode.y}
                 x2={toNode.x}
                 y2={toNode.y}
-                stroke="#0f172a"
+                stroke="#090d16"
                 stroke-width="8"
                 stroke-linecap="round"
               />
-              <!-- Track steel rails -->
+              <!-- Steel Rails -->
               <line
                 x1={fromNode.x}
                 y1={fromNode.y}
@@ -134,11 +148,21 @@
                 filter={isHighlighted ? 'url(#route-glow)' : 'none'}
               />
 
-              <!-- Operational Speed Tint on Turnout Branches -->
+              <!-- Block Names directly overlaying track line -->
+              {#if studio.layers.electrical && circuitId && edge.length_feet >= 100}
+                <g transform="translate({midX}, {midY})">
+                  <rect x="-16" y="-7" width="32" height="14" rx="2" fill="#0f172a" stroke="#334155" stroke-width="1" />
+                  <text x="0" y="3.5" text-anchor="middle" fill="#38bdf8" font-size="9" font-family="monospace" font-weight="600">
+                    {circuitId}
+                  </text>
+                </g>
+              {/if}
+
+              <!-- Speed Overlay on Diverging Branches -->
               {#if studio.layers.speeds && 'SwitchReverse' in edge.kind}
                 <text
-                  x={(fromNode.x + toNode.x) / 2 + 5}
-                  y={(fromNode.y + toNode.y) / 2 - 5}
+                  x={midX + 8}
+                  y={midY - 8}
                   fill="#f59e0b"
                   font-size="10"
                   font-weight="bold"
@@ -150,7 +174,7 @@
           {/each}
         {/if}
 
-        <!-- 2. Nodes & Appliances -->
+        <!-- 2. Nodes (IRJ, Switch Points, Boundaries) -->
         {#each Object.values(studio.project.graph.nodes) as node}
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <g
@@ -159,11 +183,11 @@
             onmousedown={(e) => startNodeDrag(e, node)}
           >
             {#if 'Boundary' in node.kind}
-              <!-- CP Boundary Flag -->
+              <!-- CP Boundary Limit Marker -->
               <rect x="-8" y="-14" width="16" height="28" rx="2" fill="#3b82f6" fill-opacity="0.2" stroke="#60a5fa" stroke-width="1.5" />
               <line x1="0" y1="-14" x2="0" y2="14" stroke="#60a5fa" stroke-width="2" />
               {#if studio.layers.names}
-                <text x="0" y="24" text-anchor="middle" fill="#93c5fd" font-size="10">
+                <text x="0" y="24" text-anchor="middle" fill="#93c5fd" font-size="10" font-weight="600">
                   {node.kind.Boundary.boundary_id}
                 </text>
               {/if}
@@ -172,14 +196,9 @@
               {#if studio.layers.electrical}
                 <line x1="-3" y1="-10" x2="-3" y2="10" stroke="#ef4444" stroke-width="2.5" />
                 <line x1="3" y1="-10" x2="3" y2="10" stroke="#ef4444" stroke-width="2.5" />
-                {#if studio.layers.names}
-                  <text x="0" y="-14" text-anchor="middle" fill="#f87171" font-size="9" font-family="monospace">
-                    {node.kind.Irj.circuit_left} ][ {node.kind.Irj.circuit_right}
-                  </text>
-                {/if}
               {/if}
             {:else if 'SwitchPoints' in node.kind}
-              <!-- Switch Point Node -->
+              <!-- Switch Points Node -->
               <circle cx="0" cy="0" r="5" fill="#f59e0b" stroke="#ffffff" stroke-width="1.5" />
               {#if studio.layers.names}
                 <text x="0" y="-12" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="bold">
@@ -187,41 +206,68 @@
                 </text>
               {/if}
             {:else if 'Bumper' in node.kind}
-              <!-- Track Bumper Stop -->
               <rect x="-4" y="-8" width="8" height="16" fill="#ef4444" stroke="#ffffff" stroke-width="1" />
             {/if}
 
-            <!-- Selection Indicator -->
             {#if studio.selectedNodeId === node.id}
-              <circle cx="0" cy="0" r="12" fill="none" stroke="#38bdf8" stroke-width="2" stroke-dasharray="3 3" />
+              <circle cx="0" cy="0" r="14" fill="none" stroke="#38bdf8" stroke-width="2" stroke-dasharray="3 3" />
             {/if}
           </g>
         {/each}
 
-        <!-- 3. Signal Layer (Masts & Heads) -->
+        <!-- 3. Signal Layer (Wayside Signaling with Engineer Cab Perspective) -->
         {#if studio.layers.signals}
           {#each studio.project.control_points as cp}
             {#each cp.signal_masts as mast}
               {@const irjNode = mast.irj_node_id ? studio.project.graph.nodes[mast.irj_node_id] : null}
               {#if irjNode}
                 {@const isRight = mast.direction === 'Right'}
-                {@const mastY = isRight ? irjNode.y + 35 : irjNode.y - 35}
-                <g class="signal-group" transform="translate({irjNode.x}, {irjNode.y})">
-                  <!-- Mast pole -->
-                  <line x1="0" y1="0" x2="0" y2={isRight ? 35 : -35} stroke="#64748b" stroke-width="2" />
-                  <!-- Signal Head Mount -->
-                  <g transform="translate(0, {isRight ? 35 : -35})">
-                    <rect x="-6" y="-12" width="12" height="24" rx="3" fill="#0f172a" stroke="#cbd5e1" stroke-width="1.5" />
-                    <circle cx="0" cy="-6" r="3.5" fill="#22c55e" />
-                    {#if mast.mast_type === 'TwoHead'}
-                      <circle cx="0" cy="6" r="3.5" fill="#ef4444" />
-                    {/if}
-                    {#if studio.layers.names}
-                      <text x={isRight ? 12 : -12} y="4" text-anchor={isRight ? 'start' : 'end'} fill="#f8fafc" font-size="10" font-weight="600">
-                        {mast.name}
-                      </text>
-                    {/if}
-                  </g>
+                <!--
+                  Engineer sitting in right-hand seat:
+                  - Southbound (traffic right): signal sits BELOW track.
+                    Base | aligns with IRJ. Arm - extends LEFT towards approaching train. Heads oo face left: |-oo
+                  - Northbound (traffic left): signal sits ABOVE track.
+                    Base | aligns with IRJ. Arm - extends RIGHT towards approaching train. Heads oo face right: oo-|
+                -->
+                <g class="signal-mast-group">
+                  {#if isRight}
+                    <!-- 2Sab: Below rail, base at IRJ, arm extending left -->
+                    <g transform="translate({irjNode.x}, {irjNode.y + 14})">
+                      <!-- Mast Base | aligned to IRJ -->
+                      <line x1="0" y1="0" x2="0" y2="16" stroke="#e2e8f0" stroke-width="3" stroke-linecap="round" />
+                      <!-- Horizontal arm extending left -->
+                      <line x1="0" y1="8" x2="-18" y2="8" stroke="#cbd5e1" stroke-width="2" />
+                      <!-- Heads facing oncoming train (facing Left) -->
+                      <circle cx="-22" cy="4" r="3.5" fill="#22c55e" stroke="#0f172a" stroke-width="1" />
+                      <circle cx="-22" cy="12" r="3.5" fill="#ef4444" stroke="#0f172a" stroke-width="1" />
+                      {#if studio.layers.names}
+                        <text x="-28" y="11" text-anchor="end" fill="#f8fafc" font-size="11" font-weight="700">
+                          {mast.name}
+                        </text>
+                      {/if}
+                    </g>
+                  {:else}
+                    <!-- 2Nab / 2Nc: Above rail, base at IRJ, arm extending right -->
+                    <g transform="translate({irjNode.x}, {irjNode.y - 14})">
+                      <!-- Mast Base | aligned to IRJ -->
+                      <line x1="0" y1="0" x2="0" y2="-16" stroke="#e2e8f0" stroke-width="3" stroke-linecap="round" />
+                      <!-- Horizontal arm extending right -->
+                      <line x1="0" y1="-8" x2="18" y2="-8" stroke="#cbd5e1" stroke-width="2" />
+                      <!-- Heads facing oncoming train (facing Right) -->
+                      {#if mast.mast_type === 'TwoHead'}
+                        <circle cx="22" cy="-12" r="3.5" fill="#22c55e" stroke="#0f172a" stroke-width="1" />
+                        <circle cx="22" cy="-4" r="3.5" fill="#ef4444" stroke="#0f172a" stroke-width="1" />
+                      {:else}
+                        <!-- Dwarf signal (single head c) -->
+                        <circle cx="22" cy="-8" r="3.5" fill="#ef4444" stroke="#0f172a" stroke-width="1" />
+                      {/if}
+                      {#if studio.layers.names}
+                        <text x="28" y="-5" text-anchor="start" fill="#f8fafc" font-size="11" font-weight="700">
+                          {mast.name}
+                        </text>
+                      {/if}
+                    </g>
+                  {/if}
                 </g>
               {/if}
             {/each}
@@ -231,10 +277,9 @@
     </g>
   </svg>
 
-  <!-- Viewport HUD Overlay -->
   <div class="hud-overlay">
     <div class="hud-item">Zoom: {Math.round(studio.zoom * 100)}%</div>
-    <div class="hud-item">Hint: Drag nodes to test rubberband routing</div>
+    <div class="hud-item">Hint: Drag nodes to adjust geometry</div>
   </div>
 </div>
 
@@ -243,7 +288,7 @@
     flex: 1;
     position: relative;
     overflow: hidden;
-    background-color: #181c24;
+    background-color: #141820;
     user-select: none;
   }
 
@@ -276,7 +321,7 @@
   }
 
   .hud-item {
-    background: rgba(15, 23, 42, 0.75);
+    background: rgba(15, 23, 42, 0.85);
     backdrop-filter: blur(4px);
     color: #94a3b8;
     padding: 4px 10px;

@@ -16,12 +16,40 @@
     { id: 'end-of-siding', name: 'End-of-Siding CP', desc: '1 Switch, 3 IRJs, 3 Masts, Island 1T1' },
     { id: 'universal-xover', name: 'Universal Crossover', desc: '2 Switches, 4 IRJs, 4 Masts' },
   ];
+
+  const layerItems: { key: keyof typeof studio.layers; name: string; keyHint: string; color: string }[] = [
+    { key: 'track', name: 'Track & Rails', keyHint: 'T', color: '#94a3b8' },
+    { key: 'electrical', name: 'Electrical & IRJ', keyHint: 'E', color: '#ef4444' },
+    { key: 'signals', name: 'Signal Masts', keyHint: 'S', color: '#22c55e' },
+    { key: 'speeds', name: 'Turnout Speeds', keyHint: 'R', color: '#f59e0b' },
+    { key: 'names', name: 'Nomenclature', keyHint: 'N', color: '#38bdf8' },
+  ];
 </script>
 
 <aside class="palette-sidebar">
   <div class="sidebar-header">
-    <div class="section-title">Component Palette</div>
-    <div class="subtitle">Drag to canvas</div>
+    <div class="section-title">EDA PALETTE</div>
+    <div class="subtitle">Drag & Drop Appliances</div>
+  </div>
+
+  <!-- KiCad-style Layer Manager -->
+  <div class="palette-group">
+    <div class="group-label">LAYERS MANAGER</div>
+    <div class="layer-list">
+      {#each layerItems as item}
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div
+          class="layer-item"
+          class:active={studio.layers[item.key]}
+          onclick={() => studio.toggleLayer(item.key)}
+        >
+          <span class="layer-swatch" style="background-color: {item.color};"></span>
+          <span class="layer-name">{item.name}</span>
+          <span class="key-hint">{item.keyHint}</span>
+        </div>
+      {/each}
+    </div>
   </div>
 
   <div class="palette-group">
@@ -49,12 +77,11 @@
   </div>
 
   <div class="palette-group shortcuts-group">
-    <div class="group-label">KEYBOARD SHORTCUTS</div>
+    <div class="group-label">QUICK SHORTCUTS</div>
     <div class="shortcut-row"><span class="key">A</span> Add Component</div>
     <div class="shortcut-row"><span class="key">W</span> Wire Track Net</div>
     <div class="shortcut-row"><span class="key">R</span> Rotate / Flip</div>
     <div class="shortcut-row"><span class="key">M</span> Move (Rubberband)</div>
-    <div class="shortcut-row"><span class="key">T/E/S</span> Toggle Layers</div>
   </div>
 </aside>
 
@@ -71,12 +98,12 @@
   }
 
   .sidebar-header {
-    padding: 12px 14px;
+    padding: 10px 14px;
     border-bottom: 1px solid #1e293b;
   }
 
   .section-title {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     color: #f8fafc;
     text-transform: uppercase;
@@ -86,20 +113,67 @@
   .subtitle {
     font-size: 10px;
     color: #64748b;
-    margin-top: 2px;
+    margin-top: 1px;
   }
 
   .palette-group {
-    padding: 12px 14px;
+    padding: 10px 14px;
     border-bottom: 1px solid #1e293b;
   }
 
   .group-label {
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 700;
     color: #64748b;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     letter-spacing: 0.5px;
+  }
+
+  /* Layers Manager */
+  .layer-list {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .layer-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    background: #151d2a;
+    border: 1px solid #233146;
+    opacity: 0.5;
+    transition: all 0.1s ease;
+  }
+
+  .layer-item.active {
+    opacity: 1;
+    background: #1e293b;
+    border-color: #38bdf8;
+  }
+
+  .layer-swatch {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+  }
+
+  .layer-name {
+    flex: 1;
+    color: #e2e8f0;
+  }
+
+  .key-hint {
+    font-size: 9px;
+    font-family: monospace;
+    color: #64748b;
+    background: #0f172a;
+    padding: 1px 4px;
+    border-radius: 2px;
   }
 
   .item-grid {
@@ -154,7 +228,6 @@
 
   .recipe-card:hover {
     border-color: #10b981;
-    background: #1e293b;
   }
 
   .recipe-title {
