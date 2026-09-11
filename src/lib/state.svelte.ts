@@ -330,6 +330,126 @@ export class StudioState {
     this.synthesizeRoutes();
   }
 
+  // Renumber all switches West to East sequentially (odd numbers: 1, 3, 5, 7...)
+  renumberAppliancesWestToEast() {
+    if (!this.project) return;
+    const cp = this.project.control_points[0];
+
+    const swItems = cp.switches.map((sw) => {
+      const nodeEntry = Object.entries(this.project!.graph.nodes).find(
+        ([_, n]) => 'SwitchPoints' in n.kind && n.kind.SwitchPoints.switch_id === sw.id
+      );
+      return {
+        sw,
+        nodeId: nodeEntry ? nodeEntry[0] : null,
+        x: nodeEntry ? nodeEntry[1].x : 0,
+      };
+    });
+
+    swItems.sort((a, b) => a.x - b.x);
+
+    swItems.forEach((item, index) => {
+      const newId = `${index * 2 + 1}`;
+      const oldId = item.sw.id;
+      if (oldId !== newId) {
+        item.sw.id = newId;
+        item.sw.name = newId;
+
+        if (item.nodeId && this.project!.graph.nodes[item.nodeId]) {
+          this.project!.graph.nodes[item.nodeId].kind = {
+            SwitchPoints: { switch_id: newId },
+          };
+        }
+
+        for (const edge of this.project!.graph.edges) {
+          if ('SwitchNormal' in edge.kind && edge.kind.SwitchNormal.switch_id === oldId) {
+            edge.kind.SwitchNormal.switch_id = newId;
+          }
+          if ('SwitchReverse' in edge.kind && edge.kind.SwitchReverse.switch_id === oldId) {
+            edge.kind.SwitchReverse.switch_id = newId;
+          }
+        }
+      }
+    });
+  }
+
+  // Insert a new Turnout inline on an existing track edge
+  insertTurnoutOnEdge(edgeIndex: number, x: number, y: number): string | null {
+    if (!this.project || edgeIndex < 0 || edgeIndex >= this.project.graph.edges.length) return null;
+    this.saveSnapshot();
+
+    const edge = this.project.graph.edges[edgeIndex];
+    const snapX = Math.round(x / 10) * 10;
+    const snapY = Math.round(y / 10) * 10;
+    const shiftDistance = 140;
+
+    // Gracefully shift all downstream nodes rightward
+    for (const node of Object.values(this.project.graph.nodes)) {
+      if (node.x >= snapX) {
+        node.x += shiftDistance;
+      }
+    }
+
+    const cp = this.project.control_points[0];
+    const tempId = `${Date.now().toString().slice(-4)}`;
+    const ptsId = `SW${tempId}_PTS`;
+    const revBumperId = `BUMPER_SW${tempId}`;
+
+    // Switch points inserted at cut location
+    this.project.graph.nodes[ptsId] = {
+      id: ptsId,
+      kind: { SwitchPoints: { switch_id: tempId } },
+      x: snapX,
+      y: snapY,
+    };
+
+    // Diverging reverse branch with buffer stop
+    this.project.graph.nodes[revBumperId] = {
+      id: revBumperId,
+      kind: { Bumper: { id: revBumperId } },
+      x: snapX + 100,
+      y: snapY + 60,
+    };
+
+    // Original incoming track terminates at switch points
+    const originalTo = edge.to;
+    edge.to = ptsId;
+
+    // Normal switch branch connects from points to the original downstream track
+    this.project.graph.edges.push({
+      id: `E_SW${tempId}_NORM`,
+      from: ptsId,
+      to: originalTo,
+      kind: { SwitchNormal: { switch_id: tempId, circuit_id: edge.kind ? ('Tangent' in edge.kind ? edge.kind.Tangent.circuit_id : '1T') : '1T' } },
+      length_feet: 100,
+    });
+
+    // Reverse switch branch connects points to the bumper
+    this.project.graph.edges.push({
+      id: `E_SW${tempId}_REV`,
+      from: ptsId,
+      to: revBumperId,
+      kind: { SwitchReverse: { switch_id: tempId, circuit_id: 'SPUR', speed: 'Slow' } },
+      length_feet: 120,
+    });
+
+    cp.switches.push({
+      id: tempId,
+      name: tempId,
+      speed: 'Slow',
+      motor_pin: null,
+      normal_sense_pin: null,
+      reverse_sense_pin: null,
+      island_circuit_id: '1T',
+    });
+
+    this.selectNode(ptsId, false);
+    this.renumberAppliancesWestToEast();
+    this.runDrc();
+    this.synthesizeRoutes();
+    return ptsId;
+  }
+
   // Cleanly split an existing track edge and insert an IRJ node with graceful horizontal expansion
   insertIrjOnEdge(edgeIndex: number, x: number, y: number): string | null {
     if (!this.project || edgeIndex < 0 || edgeIndex >= this.project.graph.edges.length) return null;
@@ -411,6 +531,7 @@ export class StudioState {
           }
 
           this.selectNode(draggedId, false);
+          this.renumberAppliancesWestToEast();
           this.runDrc();
           this.synthesizeRoutes();
           return;
@@ -639,6 +760,8 @@ export class StudioState {
           sensor_pin: null,
           optical_pin: null,
         });
+        this.selectedNodeIds = [irjId, termId];
+        this.selectedNodeId = irjId;
         createdId = irjId;
         break;
       }

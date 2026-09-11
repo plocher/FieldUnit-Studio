@@ -69,10 +69,10 @@
 
     // 1. If an appliance tool is armed in the palette, stamp a new appliance and drag it
     if (studio.activeTool && event.button === 0) {
-      // Check if clicking directly on an existing track edge to insert an inline IRJ / Block division
+      // Check if clicking directly on an existing track edge to insert inline
       let hitEdgeIndex = -1;
       let snapY = canvasY;
-      if (studio.project && (studio.activeTool === 'irj' || studio.activeTool === 'block')) {
+      if (studio.project) {
         for (let i = 0; i < studio.project.graph.edges.length; i++) {
           const edge = studio.project.graph.edges[i];
           const fromNode = studio.project.graph.nodes[edge.from];
@@ -86,7 +86,7 @@
           const projY = fromNode.y + t * (toNode.y - fromNode.y);
           const dist = Math.hypot(canvasX - projX, canvasY - projY);
 
-          if (dist <= 18) {
+          if (dist <= 22) {
             hitEdgeIndex = i;
             snapY = projY;
             break;
@@ -95,12 +95,21 @@
       }
 
       if (hitEdgeIndex >= 0) {
-        const createdId = studio.insertIrjOnEdge(hitEdgeIndex, canvasX, snapY);
-        if (createdId) {
-          draggingNodeId = createdId;
-          dragOffset = { x: 0, y: 0 };
+        if (studio.activeTool === 'irj' || studio.activeTool === 'block') {
+          const createdId = studio.insertIrjOnEdge(hitEdgeIndex, canvasX, snapY);
+          if (createdId) {
+            draggingNodeId = createdId;
+            dragOffset = { x: 0, y: 0 };
+          }
+          return;
+        } else if (studio.activeTool === 'turnout') {
+          const createdId = studio.insertTurnoutOnEdge(hitEdgeIndex, canvasX, snapY);
+          if (createdId) {
+            draggingNodeId = createdId;
+            dragOffset = { x: 0, y: 0 };
+          }
+          return;
         }
-        return;
       }
 
       const createdId = studio.addAppliance(studio.activeTool, canvasX, canvasY);
@@ -117,7 +126,15 @@
       return;
     }
 
-    // 3. If clicking on a track line, select the detection block and allow dragging the block's nodes
+    // 3. Right-Click or Middle-Click or Space+Click: PAN canvas
+    if (event.button === 2 || event.button === 1 || isSpacePressed) {
+      isPanning = true;
+      panStartX = event.clientX - studio.panX;
+      panStartY = event.clientY - studio.panY;
+      return;
+    }
+
+    // 4. If clicking on a track line, select the detection block and allow dragging the block's nodes
     const trackGroup = (event.target as HTMLElement).closest('.clickable-track');
     if (trackGroup && event.button === 0) {
       const cId = trackGroup.getAttribute('data-circuit');
@@ -130,14 +147,6 @@
         }
         return;
       }
-    }
-
-    // 4. Middle-click, Space+Click, or Shift+Click: Pan Canvas
-    if (event.button === 1 || isSpacePressed || event.shiftKey) {
-      isPanning = true;
-      panStartX = event.clientX - studio.panX;
-      panStartY = event.clientY - studio.panY;
-      return;
     }
 
     // 5. Normal Left-Click Drag on background: Marquee Selection Box
@@ -253,6 +262,7 @@
   onmousedown={handleMouseDown}
   onmousemove={handleMouseMove}
   onmouseup={handleMouseUp}
+  oncontextmenu={(e) => e.preventDefault()}
 >
   <svg bind:this={svgElement} class="schematic-svg">
     <defs>
@@ -325,6 +335,16 @@
                   if (circuitId) studio.selectCircuit(circuitId);
                 }}
               >
+                <!-- Invisible fat hit-area for effortless clicks (26px wide) -->
+                <line
+                  x1={fromNode.x}
+                  y1={fromNode.y}
+                  x2={toNode.x}
+                  y2={toNode.y}
+                  stroke="transparent"
+                  stroke-width="26"
+                  stroke-linecap="round"
+                />
                 <!-- Roadbed Shadow -->
                 <line
                   x1={fromNode.x}
