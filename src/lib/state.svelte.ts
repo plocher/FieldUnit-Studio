@@ -238,8 +238,8 @@ export class StudioState {
     this.selectedNodeId = this.selectedNodeIds[0] || null;
   }
 
-  // KiCad-style 'U' key: extend selection group one level along connected edges
-  extendSelection() {
+  // KiCad-style 'U' key: extend selection along the SAME corridor level, stopping at level changes
+  extendSelection(allowLevelChange: boolean = false) {
     if (!this.project) return;
     const current = new Set(
       this.selectedNodeIds.length > 0
@@ -252,10 +252,22 @@ export class StudioState {
 
     const next = new Set(current);
     for (const edge of this.project.graph.edges) {
-      if (current.has(edge.from)) next.add(edge.to);
-      if (current.has(edge.to)) next.add(edge.from);
+      const fromNode = this.project.graph.nodes[edge.from];
+      const toNode = this.project.graph.nodes[edge.to];
+      if (!fromNode || !toNode) continue;
+
+      // Stop at corridor level changes unless allowLevelChange is true
+      const isSameLevel = Math.abs(fromNode.y - toNode.y) <= 15;
+
+      if (isSameLevel || allowLevelChange) {
+        if (current.has(edge.from)) next.add(edge.to);
+        if (current.has(edge.to)) next.add(edge.from);
+      }
     }
     this.selectedNodeIds = Array.from(next);
+    if (!this.selectedNodeId && this.selectedNodeIds.length > 0) {
+      this.selectedNodeId = this.selectedNodeIds[0];
+    }
   }
 
   // Move node(s): enforces discrete corridor lane snapping (50px increments)

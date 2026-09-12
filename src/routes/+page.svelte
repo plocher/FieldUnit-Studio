@@ -54,8 +54,8 @@
         studio.toggleLayer('names');
         break;
       case 'u':
-        // KiCad-style 'U' key: extend selection group one level along connected tracks
-        studio.extendSelection();
+        // KiCad-style 'U' key: extend selection along same corridor (Shift+U crosses corridor levels)
+        studio.extendSelection(event.shiftKey);
         break;
       case 'l':
         // Auto-arrange / tidy layout

@@ -77,6 +77,26 @@
 
     // 1. If an appliance tool is armed in the palette, stamp a new appliance and drag it
     if (studio.activeTool && event.button === 0) {
+      // Check if clicking directly on an existing node (e.g. Bumper or IRJ)
+      let hitNodeId: string | null = null;
+      if (studio.project) {
+        for (const [id, node] of Object.entries(studio.project.graph.nodes)) {
+          if (Math.hypot(canvasX - node.x, canvasY - node.y) <= 24) {
+            hitNodeId = id;
+            break;
+          }
+        }
+      }
+
+      if (hitNodeId && studio.activeTool === 'turnout') {
+        const target = studio.project!.graph.nodes[hitNodeId];
+        const createdId = studio.addAppliance(studio.activeTool, target.x, target.y);
+        if (createdId) {
+          studio.snapAndMerge(createdId);
+        }
+        return;
+      }
+
       // Check if clicking directly on an existing track edge to insert inline
       let hitEdgeIndex = -1;
       let snapY = canvasY;
@@ -175,23 +195,11 @@
     if (isPanning) {
       studio.panX = event.clientX - panStartX;
       studio.panY = event.clientY - panStartY;
-    } else if (isGroupDragging && studio.project) {
+    } else if (isGroupDragging && studio.project && studio.selectedNodeId) {
       hasDragged = true;
       const canvasX = (event.clientX - rect.left - studio.panX) / studio.zoom;
       const canvasY = (event.clientY - rect.top - studio.panY) / studio.zoom;
-      const dx = Math.round((canvasX - lastDragPos.x) / 10) * 10;
-      const dy = Math.round((canvasY - lastDragPos.y) / 10) * 10;
-
-      if (dx !== 0 || dy !== 0) {
-        for (const id of studio.selectedNodeIds) {
-          const n = studio.project.graph.nodes[id];
-          if (n) {
-            n.x += dx;
-            n.y += dy;
-          }
-        }
-        lastDragPos = { x: canvasX, y: canvasY };
-      }
+      studio.updateNodePosition(studio.selectedNodeId, canvasX, canvasY);
     } else if (isMarquee) {
       const canvasX = (event.clientX - rect.left - studio.panX) / studio.zoom;
       const canvasY = (event.clientY - rect.top - studio.panY) / studio.zoom;
@@ -325,6 +333,19 @@
     <rect width="100%" height="100%" fill="#141820" />
     <g transform="translate({studio.panX}, {studio.panY}) scale({studio.zoom})">
       <rect x="-3000" y="-3000" width="6000" height="6000" fill="url(#grid-dots)" opacity="0.8" />
+
+      <!-- Horizontal Corridor Lane Guide Lines (every 50px: 30, 80, 130, 180, 230, 280, 330) -->
+      {#each [30, 80, 130, 180, 230, 280, 330] as laneY}
+        <line
+          x1="-2000"
+          y1={laneY}
+          x2="3000"
+          y2={laneY}
+          stroke="#1e293b"
+          stroke-width="1"
+          stroke-dasharray="6 6"
+        />
+      {/each}
 
       {#if studio.project}
         <!-- Dynamic Control Point Boundary Box -->
