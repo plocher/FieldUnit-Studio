@@ -308,6 +308,19 @@
 
   function startNodeDrag(event: MouseEvent, node: TrackNode) {
     event.stopPropagation();
+
+    // 1. If an appliance tool is armed in the palette, stamp/connect onto this node directly
+    if (studio.activeTool && event.button === 0) {
+      if (studio.activeTool === 'turnout') {
+        const createdId = studio.addAppliance(studio.activeTool, node.x, node.y);
+        if (createdId) {
+          studio.snapAndMerge(createdId);
+        }
+        studio.activeTool = null; // Disarm tool after connecting
+        return;
+      }
+    }
+
     const rect = svgElement?.getBoundingClientRect();
     if (!rect) return;
     const canvasX = (event.clientX - rect.left - studio.panX) / studio.zoom;
@@ -342,6 +355,9 @@
     if (e.key === 'Escape') studio.activeTool = null;
     if (e.key.toLowerCase() === 'r') {
       studio.rotateSelectedSwitch();
+    }
+    if (e.key.toLowerCase() === 'f') {
+      studio.flipSelectedSwitch();
     }
   }}
   onkeyup={(e) => {
@@ -527,11 +543,21 @@
                 <line x1="3" y1="-10" x2="3" y2="10" stroke="#ef4444" stroke-width="2.5" />
               </g>
             {:else if 'SwitchPoints' in node.kind}
-              <!-- Switch Points Node: Subtle speed colored aura and clean identifier "1 [MED]" -->
+              {@const swId = node.kind.SwitchPoints.switch_id}
+              {@const sw = studio.project?.control_points[0]?.switches.find((s) => s.id === swId)}
+              {@const isWestFacing = sw?.orientation?.includes('West') || false}
+              <!-- Switch Points Node: Subtle speed colored aura and clean identifier -->
               <g opacity={studio.layers.speeds ? 1.0 : 0.3}>
                 <circle cx="0" cy="0" r="14" fill="#f59e0b" fill-opacity="0.2" />
               </g>
               <circle cx="0" cy="0" r="5" fill="#f59e0b" stroke="#ffffff" stroke-width="1.5" />
+              <!-- Facing direction pointer (">" for East, "<" for West) -->
+              <path
+                d={isWestFacing ? "M -2 -3 L -5 0 L -2 3" : "M 2 -3 L 5 0 L 2 3"}
+                stroke="#ffffff"
+                stroke-width="1.2"
+                fill="none"
+              />
               <g opacity={studio.layers.names ? 1.0 : 0.3}>
                 <text x="0" y="-12" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="bold">
                   {node.kind.SwitchPoints.switch_id}

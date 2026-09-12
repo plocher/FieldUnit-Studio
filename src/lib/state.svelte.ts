@@ -727,10 +727,10 @@ export class StudioState {
     if (!sw) return;
 
     const currentOrient = sw.orientation || 'FacingEastDivergeDown';
-    const nextOrient = currentOrient === 'FacingEastDivergeDown' ? 'FacingEastDivergeUp' :
-                       currentOrient === 'FacingEastDivergeUp' ? 'FacingEastDivergeDown' :
-                       currentOrient === 'FacingWestDivergeDown' ? 'FacingWestDivergeUp' :
-                       'FacingWestDivergeDown';
+    const isCurrentlyUp = currentOrient.includes('Up');
+    const nextOrient = isCurrentlyUp
+      ? (currentOrient.replace('Up', 'Down') as typeof currentOrient)
+      : (currentOrient.replace('Down', 'Up') as typeof currentOrient);
     sw.orientation = nextOrient;
 
     const ptsNodeEntry = Object.entries(this.project.graph.nodes).find(
@@ -739,13 +739,26 @@ export class StudioState {
     if (!ptsNodeEntry) return;
     const [ptsId, ptsNode] = ptsNodeEntry;
 
-    // Flip reverse branch Y offset
+    // Flip reverse branch vertically (if was Up, go Down; if was Down, go Up)
+    const targetDy = isCurrentlyUp ? 60 : -60;
+
     for (const edge of this.project.graph.edges) {
       if (edge.from === ptsId && 'SwitchReverse' in edge.kind) {
         const revNode = this.project.graph.nodes[edge.to];
         if (revNode) {
-          const dy = revNode.y - ptsNode.y;
-          revNode.y = ptsNode.y - dy; // Invert diverge side
+          const newY = ptsNode.y + targetDy;
+          const deltaY = newY - revNode.y;
+          revNode.y = newY;
+
+          // Shift any connected bumpers or terminals on this reverse branch
+          for (const subEdge of this.project.graph.edges) {
+            if (subEdge.from === revNode.id) {
+              const child = this.project.graph.nodes[subEdge.to];
+              if (child && !('SwitchPoints' in child.kind)) {
+                child.y += deltaY;
+              }
+            }
+          }
         }
       }
     }
@@ -792,10 +805,10 @@ export class StudioState {
     if (!sw) return;
 
     const currentOrient = sw.orientation || 'FacingEastDivergeDown';
-    const nextOrient = currentOrient === 'FacingEastDivergeDown' ? 'FacingWestDivergeDown' :
-                       currentOrient === 'FacingEastDivergeUp' ? 'FacingWestDivergeUp' :
-                       currentOrient === 'FacingWestDivergeDown' ? 'FacingEastDivergeDown' :
-                       'FacingEastDivergeUp';
+    const isCurrentlyEast = currentOrient.includes('East');
+    const nextOrient = isCurrentlyEast
+      ? (currentOrient.replace('East', 'West') as typeof currentOrient)
+      : (currentOrient.replace('West', 'East') as typeof currentOrient);
     sw.orientation = nextOrient;
 
     const ptsNodeEntry = Object.entries(this.project.graph.nodes).find(
@@ -804,13 +817,25 @@ export class StudioState {
     if (!ptsNodeEntry) return;
     const [ptsId, ptsNode] = ptsNodeEntry;
 
-    // Rotate normal and reverse branches horizontally (dx -> -dx)
+    // Flip branches horizontally (East -> West or West -> East)
     for (const edge of this.project.graph.edges) {
       if (edge.from === ptsId) {
         const target = this.project.graph.nodes[edge.to];
-        if (target) {
-          const dx = target.x - ptsNode.x;
-          target.x = ptsNode.x - dx; // Invert facing direction
+        if (target && !('SwitchPoints' in target.kind)) {
+          const currentDx = target.x - ptsNode.x;
+          const targetDx = isCurrentlyEast ? -Math.abs(currentDx || 100) : Math.abs(currentDx || 100);
+          const deltaX = (ptsNode.x + targetDx) - target.x;
+          target.x = ptsNode.x + targetDx;
+
+          // Shift downstream bumpers or terminals
+          for (const subEdge of this.project.graph.edges) {
+            if (subEdge.from === target.id) {
+              const child = this.project.graph.nodes[subEdge.to];
+              if (child && !('SwitchPoints' in child.kind)) {
+                child.x += deltaX;
+              }
+            }
+          }
         }
       }
     }
