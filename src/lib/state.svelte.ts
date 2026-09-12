@@ -258,20 +258,14 @@ export class StudioState {
     this.selectedNodeIds = Array.from(next);
   }
 
-  // Move node(s): enforces model board orthogonal and 45-degree angle constraints
+  // Move node(s): enforces discrete corridor lane snapping (50px increments)
   updateNodePosition(nodeId: string, newX: number, newY: number) {
     if (!this.project || !this.project.graph.nodes[nodeId]) return;
 
     const node = this.project.graph.nodes[nodeId];
-    let snapX = Math.round(newX / 10) * 10;
-    let snapY = Math.round(newY / 10) * 10;
-
-    // Angle snapping: lock horizontal track alignment (y = 180 for main, y = 280 for siding)
-    if (Math.abs(snapY - 180) <= 20) {
-      snapY = 180;
-    } else if (Math.abs(snapY - 280) <= 20) {
-      snapY = 280;
-    }
+    const snapX = Math.round(newX / 10) * 10;
+    // Snap Y to discrete corridor lanes centered on y = 180 with 50px lane spacing
+    const snapY = Math.round((newY - 80) / 50) * 50 + 80;
 
     const dx = snapX - node.x;
     const dy = snapY - node.y;
@@ -290,7 +284,7 @@ export class StudioState {
     node.x = snapX;
     node.y = snapY;
 
-    // If moving switch points, move all connected outgoing terminal legs together maintaining 45° angle
+    // If moving switch points, move all connected outgoing terminal legs together
     if ('SwitchPoints' in node.kind) {
       for (const edge of this.project.graph.edges) {
         if (edge.from === nodeId) {
@@ -304,7 +298,7 @@ export class StudioState {
     }
   }
 
-  // Delete selected nodes and clean up connected edges, appliances, and orphaned terminals
+  // Delete selected nodes, heal tracks when deleting IRJs/switches, and remove orphaned terminals
   deleteSelected() {
     if (!this.project) return;
     const idsToDelete = this.selectedNodeIds.length > 0
@@ -319,30 +313,41 @@ export class StudioState {
 
     for (const id of idsToDelete) {
       const node = this.project.graph.nodes[id];
-      if (node && 'SwitchPoints' in node.kind) {
+      if (!node) continue;
+
+      if ('SwitchPoints' in node.kind) {
         const swId = node.kind.SwitchPoints.switch_id;
         cp.switches = cp.switches.filter((s) => s.id !== swId);
 
-        // Clean up any unattached leg terminals or bumpers created for this switch
-        const normTerminalId = `SW${swId}_NORM`;
-        const revBumperId = `BUMPER_SW${swId}`;
-        delete this.project.graph.nodes[normTerminalId];
-        delete this.project.graph.nodes[revBumperId];
+        // Delete unattached terminals created for this switch
+        delete this.project.graph.nodes[`SW${swId}_NORM`];
+        delete this.project.graph.nodes[`BUMPER_SW${swId}`];
 
-        // If this switch was inline (incoming -> PTS -> outgoing), heal the track
+        // Heal track: connect incoming edge directly to downstream normal edge
         const incomingEdge = this.project.graph.edges.find((e) => e.to === id);
         const outgoingNormEdge = this.project.graph.edges.find((e) => e.from === id && 'SwitchNormal' in e.kind);
-        if (incomingEdge && outgoingNormEdge && outgoingNormEdge.to !== normTerminalId) {
+        if (incomingEdge && outgoingNormEdge) {
           incomingEdge.to = outgoingNormEdge.to;
         }
       }
-      if (node && 'Irj' in node.kind) {
+
+      if ('Irj' in node.kind) {
         cp.signal_masts = cp.signal_masts.filter((m) => m.irj_node_id !== id);
+
+        // Heal track across deleted IRJ: connect incoming edge directly to downstream edge
+        const incomingEdge = this.project.graph.edges.find((e) => e.to === id);
+        const outgoingEdge = this.project.graph.edges.find((e) => e.from === id);
+        if (incomingEdge && outgoingEdge) {
+          incomingEdge.to = outgoingEdge.to;
+          // Drop the redundant outgoing edge so track is continuous
+          this.project.graph.edges = this.project.graph.edges.filter((e) => e.id !== outgoingEdge.id);
+        }
       }
+
       delete this.project.graph.nodes[id];
     }
 
-    // Remove any remaining edges connected to deleted nodes
+    // Remove remaining edges connected to deleted nodes
     this.project.graph.edges = this.project.graph.edges.filter(
       (e) => !idsToDelete.includes(e.from) && !idsToDelete.includes(e.to)
     );
@@ -593,24 +598,37 @@ export class StudioState {
           return;
         }
 
-        // Case C: Dragging SwitchPoints onto an IRJ (connect switch to IRJ exit)
-        if ('SwitchPoints' in draggedNode.kind && 'Irj' in targetNode.kind) {
-          // Re-route the edge coming out of targetNode to feed into draggedNode
+        // Case C: Dropping SwitchPoints onto a Bumper (extend spur into switch)
+        if ('SwitchPoints' in draggedNode.kind && 'Bumper' in targetNode.kind) {
           for (const edge of this.project.graph.edges) {
-            if (edge.from === targetId) {
-              edge.from = draggedId;
+            if (edge.to === targetId) {
+              edge.to = draggedId;
             }
           }
-          // Add a connecting track between targetNode and draggedNode
+          delete this.project.graph.nodes[targetId];
+
+          draggedNode.x = targetNode.x;
+          draggedNode.y = targetNode.y;
+
+          this.selectNode(draggedId, false);
+          this.renumberAppliancesWestToEast();
+          this.runDrc();
+          this.synthesizeRoutes();
+          return;
+        }
+
+        // Case D: Dropping SwitchPoints near an IRJ (signals bind to IRJ; connect switch downstream of IRJ)
+        if ('SwitchPoints' in draggedNode.kind && 'Irj' in targetNode.kind) {
+          // Keep the IRJ and its signal intact; connect track from IRJ to switch points
           this.project.graph.edges.push({
             id: `E_CONN_${Date.now().toString().slice(-4)}`,
             from: targetId,
             to: draggedId,
             kind: { Tangent: { circuit_id: '1T' } },
-            length_feet: 50,
+            length_feet: 40,
           });
 
-          draggedNode.x = targetNode.x + 60;
+          draggedNode.x = targetNode.x + 50;
           draggedNode.y = targetNode.y;
 
           this.selectNode(draggedId, false);
@@ -673,37 +691,28 @@ export class StudioState {
     }
   }
 
-  // Rotate / Flip a switch orientation through 4 quadrants:
-  // 1. Facing East, Diverge Down
-  // 2. Facing East, Diverge Up
-  // 3. Facing West, Diverge Down (Trailing)
-  // 4. Facing West, Diverge Up (Trailing)
-  rotateSelectedSwitch() {
+  // Flip a switch diverge side (Diverge Up <-> Diverge Down)
+  flipSelectedSwitch() {
     if (!this.project) return;
 
-    // If Turnout tool is armed, cycle the orientation for placement
     if (this.activeTool === 'turnout') {
-      const nextOrientation = {
+      const flipMap = {
         FacingEastDivergeDown: 'FacingEastDivergeUp',
-        FacingEastDivergeUp: 'FacingWestDivergeDown',
+        FacingEastDivergeUp: 'FacingEastDivergeDown',
         FacingWestDivergeDown: 'FacingWestDivergeUp',
-        FacingWestDivergeUp: 'FacingEastDivergeDown',
+        FacingWestDivergeUp: 'FacingWestDivergeDown',
       } as const;
-      this.armedTurnoutOrientation = nextOrientation[this.armedTurnoutOrientation];
+      this.armedTurnoutOrientation = flipMap[this.armedTurnoutOrientation];
       return;
     }
 
-    // Otherwise, rotate currently selected switch
     const cp = this.project.control_points[0];
     let targetSwId: string | null = null;
 
     if (this.selectedNodeId && this.project.graph.nodes[this.selectedNodeId]) {
       const node = this.project.graph.nodes[this.selectedNodeId];
-      if ('SwitchPoints' in node.kind) {
-        targetSwId = node.kind.SwitchPoints.switch_id;
-      }
+      if ('SwitchPoints' in node.kind) targetSwId = node.kind.SwitchPoints.switch_id;
     }
-
     if (!targetSwId) {
       for (const id of this.selectedNodeIds) {
         const node = this.project.graph.nodes[id];
@@ -713,7 +722,6 @@ export class StudioState {
         }
       }
     }
-
     if (!targetSwId) return;
     this.saveSnapshot();
 
@@ -722,45 +730,89 @@ export class StudioState {
 
     const currentOrient = sw.orientation || 'FacingEastDivergeDown';
     const nextOrient = currentOrient === 'FacingEastDivergeDown' ? 'FacingEastDivergeUp' :
-                       currentOrient === 'FacingEastDivergeUp' ? 'FacingWestDivergeDown' :
+                       currentOrient === 'FacingEastDivergeUp' ? 'FacingEastDivergeDown' :
                        currentOrient === 'FacingWestDivergeDown' ? 'FacingWestDivergeUp' :
-                       'FacingEastDivergeDown';
-
+                       'FacingWestDivergeDown';
     sw.orientation = nextOrient;
 
-    // Find switch points node
     const ptsNodeEntry = Object.entries(this.project.graph.nodes).find(
       ([_, n]) => 'SwitchPoints' in n.kind && n.kind.SwitchPoints.switch_id === targetSwId
     );
     if (!ptsNodeEntry) return;
     const [ptsId, ptsNode] = ptsNodeEntry;
 
-    // Calculate offsets based on orientation
-    let normDx = 100, normDy = 0;
-    let revDx = 100, revDy = 100;
-
-    switch (nextOrient) {
-      case 'FacingEastDivergeDown':
-        normDx = 100; normDy = 0; revDx = 100; revDy = 100;
-        break;
-      case 'FacingEastDivergeUp':
-        normDx = 100; normDy = 0; revDx = 100; revDy = -100;
-        break;
-      case 'FacingWestDivergeDown':
-        normDx = -100; normDy = 0; revDx = -100; revDy = 100;
-        break;
-      case 'FacingWestDivergeUp':
-        normDx = -100; normDy = 0; revDx = -100; revDy = -100;
-        break;
-    }
-
-    // Reposition reverse branch terminal, IRJ, or bumper to match new diverge angle
+    // Flip reverse branch Y offset
     for (const edge of this.project.graph.edges) {
       if (edge.from === ptsId && 'SwitchReverse' in edge.kind) {
         const revNode = this.project.graph.nodes[edge.to];
         if (revNode) {
-          revNode.x = ptsNode.x + revDx;
-          revNode.y = ptsNode.y + revDy;
+          const dy = revNode.y - ptsNode.y;
+          revNode.y = ptsNode.y - dy; // Invert diverge side
+        }
+      }
+    }
+
+    this.runDrc();
+    this.synthesizeRoutes();
+  }
+
+  // Rotate a switch facing direction by 180° (Facing East <-> Facing West / Trailing)
+  rotateSelectedSwitch() {
+    if (!this.project) return;
+
+    if (this.activeTool === 'turnout') {
+      const rotMap = {
+        FacingEastDivergeDown: 'FacingWestDivergeDown',
+        FacingEastDivergeUp: 'FacingWestDivergeUp',
+        FacingWestDivergeDown: 'FacingEastDivergeDown',
+        FacingWestDivergeUp: 'FacingEastDivergeUp',
+      } as const;
+      this.armedTurnoutOrientation = rotMap[this.armedTurnoutOrientation];
+      return;
+    }
+
+    const cp = this.project.control_points[0];
+    let targetSwId: string | null = null;
+
+    if (this.selectedNodeId && this.project.graph.nodes[this.selectedNodeId]) {
+      const node = this.project.graph.nodes[this.selectedNodeId];
+      if ('SwitchPoints' in node.kind) targetSwId = node.kind.SwitchPoints.switch_id;
+    }
+    if (!targetSwId) {
+      for (const id of this.selectedNodeIds) {
+        const node = this.project.graph.nodes[id];
+        if (node && 'SwitchPoints' in node.kind) {
+          targetSwId = node.kind.SwitchPoints.switch_id;
+          break;
+        }
+      }
+    }
+    if (!targetSwId) return;
+    this.saveSnapshot();
+
+    const sw = cp.switches.find((s) => s.id === targetSwId);
+    if (!sw) return;
+
+    const currentOrient = sw.orientation || 'FacingEastDivergeDown';
+    const nextOrient = currentOrient === 'FacingEastDivergeDown' ? 'FacingWestDivergeDown' :
+                       currentOrient === 'FacingEastDivergeUp' ? 'FacingWestDivergeUp' :
+                       currentOrient === 'FacingWestDivergeDown' ? 'FacingEastDivergeDown' :
+                       'FacingEastDivergeUp';
+    sw.orientation = nextOrient;
+
+    const ptsNodeEntry = Object.entries(this.project.graph.nodes).find(
+      ([_, n]) => 'SwitchPoints' in n.kind && n.kind.SwitchPoints.switch_id === targetSwId
+    );
+    if (!ptsNodeEntry) return;
+    const [ptsId, ptsNode] = ptsNodeEntry;
+
+    // Rotate normal and reverse branches horizontally (dx -> -dx)
+    for (const edge of this.project.graph.edges) {
+      if (edge.from === ptsId) {
+        const target = this.project.graph.nodes[edge.to];
+        if (target) {
+          const dx = target.x - ptsNode.x;
+          target.x = ptsNode.x - dx; // Invert facing direction
         }
       }
     }

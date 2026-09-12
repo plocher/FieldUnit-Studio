@@ -80,9 +80,14 @@
                  'Facing East (Down)'}
               </span>
             </div>
-            <button class="rotate-btn" onclick={() => studio.rotateSelectedSwitch()}>
-              ⤹ Rotate / Flip (R)
-            </button>
+            <div class="rotate-btn-row">
+              <button class="rotate-btn" onclick={() => studio.rotateSelectedSwitch()} title="Rotate facing direction East <-> West (R)">
+                ⤹ Rotate (R)
+              </button>
+              <button class="rotate-btn flip-btn" onclick={() => studio.flipSelectedSwitch()} title="Flip diverge side Up <-> Down (F)">
+                ⇅ Flip (F)
+              </button>
+            </div>
             <div class="prop-row" style="margin-top: 8px;">
               <span class="prop-label">Speed:</span>
               <select class="prop-select" bind:value={sw!.speed}>
@@ -264,13 +269,18 @@
     color: #ffffff;
   }
 
-  .rotate-btn {
-    width: 100%;
+  .rotate-btn-row {
+    display: flex;
+    gap: 6px;
     margin-top: 4px;
+  }
+
+  .rotate-btn {
+    flex: 1;
     background: #1e293b;
     border: 1px solid #0284c7;
     color: #38bdf8;
-    padding: 6px 10px;
+    padding: 6px 6px;
     border-radius: 4px;
     font-size: 11px;
     font-weight: 700;
@@ -280,6 +290,16 @@
 
   .rotate-btn:hover {
     background: #0284c7;
+    color: #ffffff;
+  }
+
+  .flip-btn {
+    border-color: #f59e0b;
+    color: #fbbf24;
+  }
+
+  .flip-btn:hover {
+    background: #d97706;
     color: #ffffff;
   }
 
