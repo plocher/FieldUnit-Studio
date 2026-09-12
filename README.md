@@ -59,4 +59,6 @@ npm run tauri dev
 npm run tauri build
 ```
 
-Full architecture and design details are available in [`docs/FIELDUNIT_STUDIO_DESIGN_SPEC.md`](docs/FIELDUNIT_STUDIO_DESIGN_SPEC.md).
+Full architecture and design details are available in:
+- [`docs/model-board-and-ctc-architecture.md`](docs/model-board-and-ctc-architecture.md) (Model board layout constraints & cTc architecture)
+- [`docs/FIELDUNIT_STUDIO_DESIGN_SPEC.md`](docs/FIELDUNIT_STUDIO_DESIGN_SPEC.md) (Overall system specification)
