@@ -120,32 +120,39 @@
 
   // Transmit atomic control snapshot for a station column (Code Button press)
   function punchCodeButton(stationCol: number) {
-    const swId = stationCol === 1 ? '1' : stationCol === 2 ? '3' : '5';
-    const sigId = stationCol === 1 ? '4' : stationCol === 2 ? '2' : null;
+    const swId = stationCol === 1 ? '1' : '3';
+    const sigId = stationCol === 1 ? '4' : '2';
 
     // 1. Process Switch Command with Detector Lock verification
+    // Switch 1 is interlocked with Derail 5 (like a crossover)
     const demandedPos = switchDemands[swId];
-    const island = swId === '1' ? '1T1' : swId === '3' ? '3T1' : '5T1';
-
-    // Detector Lock: If island track is occupied or time locked, switch machine will not move!
-    const isLocked = trackOccupancy[island] || (sigId && timeLockSeconds[sigId] > 0);
+    const islandLocked = swId === '1' 
+      ? (trackOccupancy['1T1'] || trackOccupancy['5T1']) 
+      : trackOccupancy['3T1'];
+    const isLocked = islandLocked || (timeLockSeconds[sigId] > 0);
 
     if (!isLocked && switchFieldStatus[swId] !== demandedPos) {
-      switchFieldStatus = { ...switchFieldStatus, [swId]: 'Moving' };
-      // Simulate Tortoise motor travel time (2.0 seconds)
-      setTimeout(() => {
-        switchFieldStatus = { ...switchFieldStatus, [swId]: demandedPos };
-        evaluatePlantRoutes();
-      }, 2000);
+      if (swId === '1') {
+        switchFieldStatus = { ...switchFieldStatus, '1': 'Moving', '5': 'Moving' };
+        setTimeout(() => {
+          switchFieldStatus = { ...switchFieldStatus, '1': demandedPos, '5': demandedPos };
+          evaluatePlantRoutes();
+        }, 2000);
+      } else {
+        switchFieldStatus = { ...switchFieldStatus, '3': 'Moving' };
+        setTimeout(() => {
+          switchFieldStatus = { ...switchFieldStatus, '3': demandedPos };
+          evaluatePlantRoutes();
+        }, 2000);
+      }
     }
 
     // 2. Process Signal Command with Approach Time Locking
-    if (sigId) {
-      const demandedSig = signalDemands[sigId];
-      // If signal was previously permissive and dispatcher forces it to Stop: engage time lock!
-      if (demandedSig === 'Stop' && (signalAspects['2NAB'] !== 'Stop' || signalAspects['2SA'] !== 'Stop')) {
-        timeLockSeconds = { ...timeLockSeconds, [sigId]: 15 }; // 15s time lock countdown for simulation
-      }
+    const demandedSig = signalDemands[sigId];
+    if (sigId === '2' && demandedSig === 'Stop' && (signalAspects['2NAB'] !== 'Stop' || signalAspects['2SA'] !== 'Stop')) {
+      timeLockSeconds = { ...timeLockSeconds, [sigId]: 15 };
+    } else if (sigId === '4' && demandedSig === 'Stop' && (signalAspects['4NA'] !== 'Stop' || signalAspects['4SA'] !== 'Stop')) {
+      timeLockSeconds = { ...timeLockSeconds, [sigId]: 15 };
     }
 
     evaluatePlantRoutes();
@@ -319,10 +326,12 @@
 
           <!-- TOP BAND: Thin-Lined Plant Track Diagram & Geographic Features -->
           <g class="thin-schematic-band" opacity="0.6">
+            <!-- MT2 (Runs all the way across) -->
             <line x1="50" y1="28" x2="958" y2="28" stroke="#cbd5e1" stroke-width="2" />
-            <line x1="50" y1="40" x2="958" y2="40" stroke="#cbd5e1" stroke-width="2" />
+            <!-- MT1 merging into MT2 at SW3, turning 2MT to single mainline going south -->
+            <path d="M 50,40 L 444,40 L 504,28" fill="none" stroke="#cbd5e1" stroke-width="2" stroke-linejoin="round" />
             <!-- Industry spur thin line -->
-            <path d="M 320,28 L 380,16 L 680,16" fill="none" stroke="#94a3b8" stroke-width="1.5" />
+            <path d="M 300,28 L 360,16 L 680,16" fill="none" stroke="#94a3b8" stroke-width="1.5" />
             <!-- Highway Overpass Landmark -->
             <line x1="280" y1="8" x2="280" y2="48" stroke="#f59e0b" stroke-width="2" stroke-dasharray="3 3" />
             <line x1="310" y1="8" x2="310" y2="48" stroke="#f59e0b" stroke-width="2" stroke-dasharray="3 3" />
@@ -359,14 +368,15 @@
             <text x="710" y="90" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="monospace" font-weight="700">IND 1</text>
           </g>
 
-          <!-- Derail 5 Stamped ID & Point Indicator Lamp -->
+          <!-- Derail 5 Stamped ID & Point Indicator Lamp (Interlocked with SW1) -->
           <text x="365" y="94" fill="#f8fafc" font-size="13" font-weight="900" font-family="sans-serif">5</text>
-          <circle cx="390" cy="105" r="7" fill={switchFieldStatus['5'] === 'Normal' ? '#ef4444' : '#ffffff'} stroke="#000000" stroke-width="2" />
+          <circle cx="390" cy="105" r="7" fill={switchFieldStatus['1'] === 'Normal' ? '#ef4444' : '#ffffff'} stroke="#000000" stroke-width="2" />
 
-          <!-- Signal 4NA Searchlight Head -->
-          <line x1="620" y1="105" x2="620" y2="84" stroke="#cbd5e1" stroke-width="2.5" />
-          <circle cx="620" cy="84" r="7" fill={signalAspects['4NA'] !== 'Stop' ? 'url(#jewel-green-lit)' : 'url(#jewel-red-lit)'} stroke="#ffffff" stroke-width="1.5" />
-          <text x="636" y="88" fill="#e2e8f0" font-size="10" font-weight="800">4NA</text>
+          <!-- Signal 4NA Searchlight Head (Rotated CCW 90°: Horizontal along track) -->
+          <line x1="620" y1="105" x2="620" y2="92" stroke="#cbd5e1" stroke-width="2" />
+          <line x1="620" y1="92" x2="638" y2="92" stroke="#cbd5e1" stroke-width="2.5" />
+          <circle cx="638" cy="92" r="7" fill={signalAspects['4NA'] !== 'Stop' ? 'url(#jewel-green-lit)' : 'url(#jewel-red-lit)'} stroke="#ffffff" stroke-width="1.5" />
+          <text x="652" y="96" fill="#e2e8f0" font-size="10" font-weight="800">4NA</text>
 
           <!-- LEVEL 0: Mainline MT2 (Northbound / Eastward) -->
           <text x="50" y="130" fill="#94a3b8" font-size="11" font-weight="900" letter-spacing="0.5">MAIN 2</text>
@@ -380,10 +390,11 @@
             <text x="150" y="130" text-anchor="middle" fill={trackOccupancy['2SAT'] ? '#ef4444' : '#94a3b8'} font-size="10" font-family="monospace" font-weight="800">2SAT</text>
           </g>
 
-          <!-- Signal 4SA on MT2 -->
-          <line x1="200" y1="145" x2="200" y2="166" stroke="#cbd5e1" stroke-width="2.5" />
-          <circle cx="200" cy="166" r="7" fill={signalAspects['4SA'] !== 'Stop' ? 'url(#jewel-green-lit)' : 'url(#jewel-red-lit)'} stroke="#ffffff" stroke-width="1.5" />
-          <text x="200" y="184" text-anchor="middle" fill="#e2e8f0" font-size="10" font-weight="800">4SA</text>
+          <!-- Signal 4SA on MT2 (Rotated CCW 90°: Horizontal along track facing left) -->
+          <line x1="200" y1="145" x2="200" y2="158" stroke="#cbd5e1" stroke-width="2" />
+          <line x1="200" y1="158" x2="182" y2="158" stroke="#cbd5e1" stroke-width="2.5" />
+          <circle cx="182" cy="158" r="7" fill={signalAspects['4SA'] !== 'Stop' ? 'url(#jewel-green-lit)' : 'url(#jewel-red-lit)'} stroke="#ffffff" stroke-width="1.5" />
+          <text x="182" y="174" text-anchor="middle" fill="#e2e8f0" font-size="10" font-weight="800">4SA</text>
 
           <!-- Main 2 Continuous Line through Interlocking -->
           <line x1="200" y1="145" x2="720" y2="145" stroke="#ffffff" stroke-width="12" />
@@ -417,11 +428,12 @@
           <circle cx="490" cy="145" r="5.5" fill={switchFieldStatus['3'] === 'Normal' ? '#ffffff' : '#1e293b'} stroke="#64748b" stroke-width="1.5" />
           <circle cx="490" cy="157" r="5.5" fill={switchFieldStatus['3'] === 'Reverse' ? '#f59e0b' : '#1e293b'} stroke="#64748b" stroke-width="1.5" />
 
-          <!-- Signal 2NAB on MT2 (Two Searchlight Heads) -->
-          <line x1="720" y1="145" x2="720" y2="112" stroke="#cbd5e1" stroke-width="2.5" />
-          <circle cx="720" cy="126" r="6" fill={signalAspects['2NAB'] === 'Clear' ? 'url(#jewel-green-lit)' : 'url(#jewel-red-lit)'} stroke="#ffffff" stroke-width="1.5" />
-          <circle cx="720" cy="112" r="6" fill={signalAspects['2NAB'] === 'Diverging' ? 'url(#jewel-green-lit)' : 'url(#jewel-red-lit)'} stroke="#ffffff" stroke-width="1.5" />
-          <text x="736" y="120" fill="#e2e8f0" font-size="10" font-weight="800">2NAB</text>
+          <!-- Signal 2NAB on MT2 (Two Searchlight Heads, Rotated CCW 90°: Horizontal along track facing right) -->
+          <line x1="720" y1="145" x2="720" y2="134" stroke="#cbd5e1" stroke-width="2" />
+          <line x1="720" y1="134" x2="752" y2="134" stroke="#cbd5e1" stroke-width="2.5" />
+          <circle cx="738" cy="134" r="6" fill={signalAspects['2NAB'] === 'Clear' ? 'url(#jewel-green-lit)' : 'url(#jewel-red-lit)'} stroke="#ffffff" stroke-width="1.5" />
+          <circle cx="752" cy="134" r="6" fill={signalAspects['2NAB'] === 'Diverging' ? 'url(#jewel-green-lit)' : 'url(#jewel-red-lit)'} stroke="#ffffff" stroke-width="1.5" />
+          <text x="764" y="138" fill="#e2e8f0" font-size="10" font-weight="800">2NAB</text>
 
           <!-- Single Track Main Exit 1NAT -->
           <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -445,440 +457,226 @@
             <text x="150" y="190" text-anchor="middle" fill={trackOccupancy['1SAT'] ? '#ef4444' : '#94a3b8'} font-size="10" font-family="monospace" font-weight="800">1SAT</text>
           </g>
 
-          <!-- Signal 2SA Dwarf Searchlight on MT1 -->
-          <line x1="200" y1="205" x2="200" y2="224" stroke="#cbd5e1" stroke-width="2.5" />
-          <circle cx="200" cy="224" r="6" fill={signalAspects['2SA'] !== 'Stop' ? 'url(#jewel-green-lit)' : 'url(#jewel-red-lit)'} stroke="#ffffff" stroke-width="1.5" />
-          <text x="216" y="228" fill="#e2e8f0" font-size="10" font-weight="800">2SA</text>
+          <!-- Signal 2SA Dwarf Searchlight on MT1 (Rotated CCW 90°: Horizontal along track facing left) -->
+          <line x1="200" y1="205" x2="200" y2="218" stroke="#cbd5e1" stroke-width="2" />
+          <line x1="200" y1="218" x2="182" y2="218" stroke="#cbd5e1" stroke-width="2.5" />
+          <circle cx="182" cy="218" r="6" fill={signalAspects['2SA'] !== 'Stop' ? 'url(#jewel-green-lit)' : 'url(#jewel-red-lit)'} stroke="#ffffff" stroke-width="1.5" />
+          <text x="182" y="234" text-anchor="middle" fill="#e2e8f0" font-size="10" font-weight="800">2SA</text>
 
-          <!-- ROW 4: Milepost Numbers Row at Bottom of Model Board -->
-          <g class="milepost-row" fill="#64748b" font-size="10" font-weight="800" font-family="monospace">
-            <text x="120" y="250" text-anchor="middle">MP 82.5</text>
-            <text x="360" y="250" text-anchor="middle">MP 83.0</text>
-            <text x="504" y="250" text-anchor="middle">MP 83.2</text>
-            <text x="680" y="250" text-anchor="middle">MP 83.5</text>
-            <text x="830" y="250" text-anchor="middle">MP 84.0</text>
-          </g>
         </svg>
       </div>
     </div>
 
-    <!-- LOWER SECTION: Seamless Continuous US&S Style 504 Lever Deck (Olive Green, Same Width as Model Board) -->
+    <!-- LOWER SECTION: Seamless Continuous US&S Style 504 Lever Deck (Olive Green, All Columns Punched, Same Width as Model Board) -->
     <div class="lever-deck-section">
       <div class="uss-continuous-console">
-        <!-- COLUMN 0: Unused Column with Pre-Punched Empty Holes -->
-        <div class="uss-column-bay unused-column">
-          <svg viewBox="0 0 144 480" class="uss-unused-bay-svg">
-            <!-- Top Mounting Screw -->
-            <circle cx="72" cy="14" r="4.5" fill="#080c12" stroke="#1e2918" stroke-width="1.5" />
-            <!-- Switch Lamp Holes (Matching active switch lamps at x=36, x=108, y=34) -->
-            <circle cx="36" cy="34" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-            <circle cx="108" cy="34" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-            <!-- Switch Lever Shaft Hole (Matching active lever pivot at x=72, y=144) -->
-            <circle cx="72" cy="144" r="14" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-            <circle cx="72" cy="144" r="4" fill="#040609" />
-            <!-- Mid Mounting Screw -->
-            <circle cx="72" cy="180" r="4.5" fill="#080c12" stroke="#1e2918" stroke-width="1.5" />
-            <!-- Signal Lamp Holes (Matching active signal lamps: Stop at 72,198; L/R at 36,224 and 108,224) -->
-            <circle cx="72" cy="198" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-            <circle cx="36" cy="224" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-            <circle cx="108" cy="224" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-            <!-- Signal Lever Shaft Hole (Matching active signal lever pivot at x=72, y=334) -->
-            <circle cx="72" cy="334" r="14" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-            <circle cx="72" cy="334" r="4" fill="#040609" />
-            <!-- Code Button Hole (Matching active code button at x=72, y=438) -->
-            <circle cx="72" cy="438" r="18" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-          </svg>
-        </div>
+        <!-- Loop over 7 columns (0 through 6) - All columns share the exact same punched holes! -->
+        {#each [0, 1, 2, 3, 4, 5, 6] as colIndex}
+          <div class="uss-column-bay" class:unused-column={colIndex !== 1 && colIndex !== 2}>
+            <svg viewBox="0 0 144 490" class="uss-column-svg">
+              <!-- Background Pre-Punched Empty Holes (Identical on ALL columns!) -->
+              <g class="punched-holes-layer">
+                <circle cx="72" cy="14" r="4.5" fill="#080c12" stroke="#1e2918" stroke-width="1.5" />
+                <!-- Switch Lamp Holes at (36, 40) and (108, 40) -->
+                <circle cx="36" cy="40" r="9" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+                <circle cx="108" cy="40" r="9" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+                <!-- Switch Lever Shaft Hole at (72, 144) -->
+                <circle cx="72" cy="144" r="14" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+                <circle cx="72" cy="144" r="4" fill="#040609" />
+                <!-- Mid Mounting Screw at (72, 180) -->
+                <circle cx="72" cy="180" r="4.5" fill="#080c12" stroke="#1e2918" stroke-width="1.5" />
+                <!-- Signal STOP Lamp Hole at (72, 206) -->
+                <circle cx="72" cy="206" r="9" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+                <!-- Signal L and R Lamp Holes at (36, 234) and (108, 234) -->
+                <circle cx="36" cy="234" r="9" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+                <circle cx="108" cy="234" r="9" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+                <!-- Signal Lever Shaft Hole at (72, 336) -->
+                <circle cx="72" cy="336" r="14" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+                <circle cx="72" cy="336" r="4" fill="#040609" />
+                <!-- Code Button Hole at (72, 436) -->
+                <circle cx="72" cy="436" r="18" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+              </g>
 
-        <!-- COLUMN 1: Active Station Column 1 (Switch 1 & Signal 4) -->
-        <div class="uss-column-bay">
-          <!-- Switch 1 Unit (Lamps: N=Green, R=Yellow/Amber on 2" centers at y=34) -->
-          <div class="uss-lever-tier">
-            <div class="uss-switch-lamp-cluster">
-              <div class="jewel-mount left-mount" title="Normal Correspondence (1NWK) - Green">
-                <span class="uss-jewel-lens jewel-green" class:lit={switchFieldStatus['1'] === 'Normal'}></span>
-              </div>
-              <div class="jewel-mount right-mount" title="Reverse Correspondence (1RWK) - Yellow">
-                <span class="uss-jewel-lens jewel-amber" class:lit={switchFieldStatus['1'] === 'Reverse'}></span>
-              </div>
-            </div>
+              <!-- ACTIVE COLUMN 1: Switch 1 & Signal 4 & Code 1 -->
+              {#if colIndex === 1}
+                <!-- Switch 1 Lamps (Directly seated in the punched holes at y=40) -->
+                <circle cx="36" cy="40" r="8" fill={switchFieldStatus['1'] === 'Normal' ? 'url(#jewel-green-lit)' : 'url(#jewel-green-dark)'} stroke="#cbd5e1" stroke-width="1.5" filter="url(#chrome-glow)" />
+                <circle cx="108" cy="40" r="8" fill={switchFieldStatus['1'] === 'Reverse' ? 'url(#jewel-amber-lit)' : 'url(#jewel-amber-dark)'} stroke="#cbd5e1" stroke-width="1.5" filter="url(#chrome-glow)" />
 
-            <!-- US&S Shield Plate & Lever (Pivoting at y=144, matching punched hole) -->
-            <!-- svelte-ignore a11y_click_events_have_key_events -->
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <div
-              class="uss-lever-shield-container"
-              onclick={() => toggleSwitchLever('1')}
-              oncontextmenu={(e) => cycleDog('switch', '1', e)}
-              title="Switch 1: Click lever to throw (Normal 30° Left ↔ Reverse 30° Right) | Right-click to dog"
-            >
-              <svg viewBox="0 0 144 116" class="uss-shield-svg">
-                <!-- US&S Shield Plate: Triangle with Pot Lid, bottom vertex at (72, 98) around lever hole -->
-                <path
-                  d="M 50,6 L 94,6 Q 102,6 106,14 L 122,30 Q 128,36 120,46 L 88,94 Q 78,106 72,106 Q 66,106 56,94 L 24,46 Q 16,36 22,30 L 38,14 Q 42,6 50,6 Z"
-                  fill="url(#shield-plate-metal)"
-                  stroke="#94a3b8"
-                  stroke-width="1.5"
-                />
-                <!-- Center Stamped Number & Type Label in Raised Pot Lid -->
-                <text x="72" y="21" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="900" font-family="'Arial', sans-serif">1</text>
-                <text x="72" y="30" text-anchor="middle" fill="#94a3b8" font-size="7.5" font-weight="800" letter-spacing="1">SWITCH</text>
-
-                <!-- Unanimated Large Bold White Letters on Shoulders Directly Under Lamps -->
-                <text x="36" y="44" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="900" font-family="'Arial', sans-serif">N</text>
-                <text x="108" y="44" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="900" font-family="'Arial', sans-serif">R</text>
-
-                <!-- Lever Assembly (Pivots at x=72, y=94 - tip stays below number/words!) -->
-                <g class="uss-lever-rotor" transform="translate(72, 94) rotate({switchDemands['1'] === 'Normal' ? -30 : 30})">
-                  <!-- Teardrop Paddle Blade -->
+                <!-- Switch 1 US&S Shield Plate & Lever (Clickable) -->
+                <!-- svelte-ignore a11y_click_events_have_key_events -->
+                <!-- svelte-ignore a11y_no_static_element_interactions -->
+                <g class="uss-plate-group" role="button" tabindex="0"
+                  onclick={() => toggleSwitchLever('1')}
+                  oncontextmenu={(e) => cycleDog('switch', '1', e)}
+                >
+                  <!-- Shield Plate (Solid Black with Crisp White/Silver Border) -->
                   <path
-                    d="M -7,0 C -10,-14 -8,-36 -3,-46 C -1,-50 1,-50 3,-46 C 8,-36 10,-14 7,0 C 4,6 -4,6 -7,0 Z"
-                    fill="url(#paddle-plastic)"
-                    stroke="#0f172a"
-                    stroke-width="1.5"
+                    d="M 50,62 L 94,62 Q 102,62 106,70 L 122,86 Q 128,92 120,102 L 88,144 Q 78,156 72,156 Q 66,156 56,144 L 24,102 Q 16,92 22,86 L 38,70 Q 42,62 50,62 Z"
+                    fill="#0a0a0a"
+                    stroke="#ffffff"
+                    stroke-width="1.8"
                   />
-                  <!-- White Molded Pointer Stripe -->
-                  <line x1="0" y1="-46" x2="0" y2="-6" stroke="#f8fafc" stroke-width="2.5" stroke-linecap="round" />
-                  <!-- Center Chrome Hub -->
-                  <circle cx="0" cy="0" r="14" fill="url(#hub-chrome)" stroke="#090d16" stroke-width="1.5" />
-                  <circle cx="0" cy="0" r="5" fill="#1e293b" />
+                  <!-- Stamped Number & Type in Raised Pot Lid -->
+                  <text x="72" y="75" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="900" font-family="'Arial', sans-serif">1</text>
+                  <text x="72" y="85" text-anchor="middle" fill="#cbd5e1" font-size="7.5" font-weight="800" letter-spacing="1">SWITCH</text>
+
+                  <!-- Unanimated Bold White Letters on Shoulders -->
+                  <text x="36" y="99" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="900" font-family="'Arial', sans-serif">N</text>
+                  <text x="108" y="99" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="900" font-family="'Arial', sans-serif">R</text>
+
+                  <!-- Lever Paddle (Pivots at x=72, y=144; tip never covers text!) -->
+                  <g class="uss-lever-rotor" transform="translate(72, 144) rotate({switchDemands['1'] === 'Normal' ? -30 : 30})">
+                    <path
+                      d="M -7,0 C -10,-14 -8,-36 -3,-46 C -1,-50 1,-50 3,-46 C 8,-36 10,-14 7,0 C 4,6 -4,6 -7,0 Z"
+                      fill="url(#paddle-plastic)"
+                      stroke="#0f172a"
+                      stroke-width="1.5"
+                    />
+                    <line x1="0" y1="-46" x2="0" y2="-6" stroke="#f8fafc" stroke-width="2.5" stroke-linecap="round" />
+                    <circle cx="0" cy="0" r="14" fill="url(#hub-chrome)" stroke="#090d16" stroke-width="1.5" />
+                    <circle cx="0" cy="0" r="5" fill="#1e293b" />
+                  </g>
                 </g>
-              </svg>
 
-              {#if switchDogs['1'] !== 'none'}
-                <div class="uss-dog-badge dog-{switchDogs['1']}">DOG</div>
-              {/if}
-            </div>
-          </div>
+                <!-- Signal 4 Lamps in 2 Layers (Directly seated in punched holes) -->
+                <!-- Layer 1: STOP Lamp at (72, 206) -->
+                <circle cx="72" cy="206" r="8" fill={signalAspects['4NA'] === 'Stop' && signalAspects['4SA'] === 'Stop' ? 'url(#jewel-red-lit)' : 'url(#jewel-red-dark)'} stroke="#cbd5e1" stroke-width="1.5" filter="url(#chrome-glow)" />
+                <!-- Layer 2: L and R Lamps at (36, 234) and (108, 234) -->
+                <circle cx="36" cy="234" r="8" fill={signalAspects['4NA'] !== 'Stop' ? 'url(#jewel-green-lit)' : 'url(#jewel-green-dark)'} stroke="#cbd5e1" stroke-width="1.5" filter="url(#chrome-glow)" />
+                <circle cx="108" cy="234" r="8" fill={signalAspects['4SA'] !== 'Stop' ? 'url(#jewel-green-lit)' : 'url(#jewel-green-dark)'} stroke="#cbd5e1" stroke-width="1.5" filter="url(#chrome-glow)" />
 
-          <!-- Signal 4 Unit (2 Layers: Upper Center Red STOP at y=198, Lower Green L & R at y=224) -->
-          <div class="uss-lever-tier">
-            <div class="uss-signal-lamp-cluster">
-              <!-- Upper Layer (Center): Red Stop Indication -->
-              <div class="signal-lamp-stop-top" title="Stop Indication - Red">
-                <span class="uss-jewel-lens jewel-red" class:lit={signalAspects['4NA'] === 'Stop' && signalAspects['4SA'] === 'Stop'}></span>
-              </div>
-              <!-- Lower Layer (Left & Right on 2\" centers): Green Permissive Indications -->
-              <div class="signal-lamp-row-bottom">
-                <div class="jewel-mount left-mount" title="Left Permissive (4NA) - Green">
-                  <span class="uss-jewel-lens jewel-green" class:lit={signalAspects['4NA'] !== 'Stop'}></span>
-                </div>
-                <div class="jewel-mount right-mount" title="Right Permissive (4SA) - Green">
-                  <span class="uss-jewel-lens jewel-green" class:lit={signalAspects['4SA'] !== 'Stop'}></span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Signal 4 Shield Plate & Lever (Pivoting at y=334, matching punched hole) -->
-            <!-- svelte-ignore a11y_click_events_have_key_events -->
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <div
-              class="uss-lever-shield-container"
-              onclick={() => cycleSignalLever('4')}
-              oncontextmenu={(e) => cycleDog('signal', '4', e)}
-              title="Signal 4: Click lever to throw (Left 30° ↔ Stop Center 0° ↔ Right 30°) | Right-click to dog"
-            >
-              <svg viewBox="0 0 144 116" class="uss-shield-svg">
-                <path
-                  d="M 50,6 L 94,6 Q 102,6 106,14 L 122,30 Q 128,36 120,46 L 88,94 Q 78,106 72,106 Q 66,106 56,94 L 24,46 Q 16,36 22,30 L 38,14 Q 42,6 50,6 Z"
-                  fill="url(#shield-plate-metal)"
-                  stroke="#94a3b8"
-                  stroke-width="1.5"
-                />
-                <text x="72" y="21" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="900" font-family="'Arial', sans-serif">4</text>
-                <text x="72" y="30" text-anchor="middle" fill="#94a3b8" font-size="7.5" font-weight="800" letter-spacing="1">SIGNAL</text>
-
-                <!-- Unanimated Large Bold White Labels -->
-                <text x="36" y="44" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="900" font-family="'Arial', sans-serif">L</text>
-                <text x="72" y="42" text-anchor="middle" fill="#ffffff" font-size="8.5" font-weight="900" font-family="'Arial', sans-serif">STOP</text>
-                <text x="108" y="44" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="900" font-family="'Arial', sans-serif">R</text>
-
-                <!-- Signal 4 Paddle Lever (Pivoting at x=72, y=94) -->
-                <g class="uss-lever-rotor" transform="translate(72, 94) rotate({signalDemands['4'] === 'Left' ? -30 : signalDemands['4'] === 'Right' ? 30 : 0})">
+                <!-- Signal 4 US&S Shield Plate & Lever (Clickable) -->
+                <!-- svelte-ignore a11y_click_events_have_key_events -->
+                <!-- svelte-ignore a11y_no_static_element_interactions -->
+                <g class="uss-plate-group" role="button" tabindex="0"
+                  onclick={() => cycleSignalLever('4')}
+                  oncontextmenu={(e) => cycleDog('signal', '4', e)}
+                >
                   <path
-                    d="M -7,0 C -10,-14 -8,-36 -3,-46 C -1,-50 1,-50 3,-46 C 8,-36 10,-14 7,0 C 4,6 -4,6 -7,0 Z"
-                    fill="url(#paddle-plastic)"
-                    stroke="#0f172a"
-                    stroke-width="1.5"
+                    d="M 50,254 L 94,254 Q 102,254 106,262 L 122,278 Q 128,284 120,294 L 88,336 Q 78,348 72,348 Q 66,348 56,336 L 24,294 Q 16,284 22,278 L 38,262 Q 42,254 50,254 Z"
+                    fill="#0a0a0a"
+                    stroke="#ffffff"
+                    stroke-width="1.8"
                   />
-                  <line x1="0" y1="-46" x2="0" y2="-6" stroke="#f8fafc" stroke-width="2.5" stroke-linecap="round" />
-                  <circle cx="0" cy="0" r="14" fill="url(#hub-chrome)" stroke="#090d16" stroke-width="1.5" />
-                  <circle cx="0" cy="0" r="5" fill="#1e293b" />
+                  <text x="72" y="267" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="900" font-family="'Arial', sans-serif">4</text>
+                  <text x="72" y="277" text-anchor="middle" fill="#cbd5e1" font-size="7.5" font-weight="800" letter-spacing="1">SIGNAL</text>
+
+                  <text x="36" y="291" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="900" font-family="'Arial', sans-serif">L</text>
+                  <text x="72" y="290" text-anchor="middle" fill="#ffffff" font-size="8.5" font-weight="900" font-family="'Arial', sans-serif">STOP</text>
+                  <text x="108" y="291" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="900" font-family="'Arial', sans-serif">R</text>
+
+                  <g class="uss-lever-rotor" transform="translate(72, 336) rotate({signalDemands['4'] === 'Left' ? -30 : signalDemands['4'] === 'Right' ? 30 : 0})">
+                    <path
+                      d="M -7,0 C -10,-14 -8,-36 -3,-46 C -1,-50 1,-50 3,-46 C 8,-36 10,-14 7,0 C 4,6 -4,6 -7,0 Z"
+                      fill="url(#paddle-plastic)"
+                      stroke="#0f172a"
+                      stroke-width="1.5"
+                    />
+                    <line x1="0" y1="-46" x2="0" y2="-6" stroke="#f8fafc" stroke-width="2.5" stroke-linecap="round" />
+                    <circle cx="0" cy="0" r="14" fill="url(#hub-chrome)" stroke="#090d16" stroke-width="1.5" />
+                    <circle cx="0" cy="0" r="5" fill="#1e293b" />
+                  </g>
                 </g>
-              </svg>
 
-              {#if signalDogs['4'] !== 'none'}
-                <div class="uss-dog-badge dog-{signalDogs['4']}">DOG</div>
+                <!-- Code Button 1 (Seated at 72, 436 - never cut off!) -->
+                <!-- svelte-ignore a11y_click_events_have_key_events -->
+                <!-- svelte-ignore a11y_no_static_element_interactions -->
+                <g class="uss-code-button-interactive" role="button" tabindex="0" onclick={() => punchCodeButton(1)} cursor="pointer">
+                  <circle cx="72" cy="436" r="21" fill="url(#button-chrome)" stroke="#94a3b8" stroke-width="2" />
+                  <circle cx="72" cy="436" r="15" fill="url(#hub-chrome)" stroke="#475569" stroke-width="1" />
+                  <text x="72" y="441" text-anchor="middle" fill="#0f172a" font-size="13" font-weight="900" font-family="'Arial', sans-serif">1</text>
+                </g>
               {/if}
-            </div>
-          </div>
 
-          <!-- Authentic Round Machined US&S Code Button at y=438 (Never cut off) -->
-          <div class="code-button-mount">
-            <button class="uss-round-code-button" onclick={() => punchCodeButton(1)} title="Punch to transmit atomic snapshot">
-              <div class="round-button-outer-rim">
-                <div class="round-button-piston">
-                  <span class="button-piston-text">1</span>
-                </div>
-              </div>
-            </button>
-          </div>
-        </div>
+              <!-- ACTIVE COLUMN 2: Switch 3 & Signal 2 & Code 2 -->
+              {#if colIndex === 2}
+                <!-- Switch 3 Lamps -->
+                <circle cx="36" cy="40" r="8" fill={switchFieldStatus['3'] === 'Normal' ? 'url(#jewel-green-lit)' : 'url(#jewel-green-dark)'} stroke="#cbd5e1" stroke-width="1.5" filter="url(#chrome-glow)" />
+                <circle cx="108" cy="40" r="8" fill={switchFieldStatus['3'] === 'Reverse' ? 'url(#jewel-amber-lit)' : 'url(#jewel-amber-dark)'} stroke="#cbd5e1" stroke-width="1.5" filter="url(#chrome-glow)" />
 
-        <!-- COLUMN 2: Active Station Column 2 (Switch 3 & Signal 2) -->
-        <div class="uss-column-bay">
-          <!-- Switch 3 Unit -->
-          <div class="uss-lever-tier">
-            <div class="uss-switch-lamp-cluster">
-              <div class="jewel-mount left-mount" title="Normal Correspondence (3NWK) - Green">
-                <span class="uss-jewel-lens jewel-green" class:lit={switchFieldStatus['3'] === 'Normal'}></span>
-              </div>
-              <div class="jewel-mount right-mount" title="Reverse Correspondence (3RWK) - Yellow">
-                <span class="uss-jewel-lens jewel-amber" class:lit={switchFieldStatus['3'] === 'Reverse'}></span>
-              </div>
-            </div>
-
-            <!-- Switch 3 Shield Plate & Lever -->
-            <!-- svelte-ignore a11y_click_events_have_key_events -->
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <div
-              class="uss-lever-shield-container"
-              onclick={() => toggleSwitchLever('3')}
-              oncontextmenu={(e) => cycleDog('switch', '3', e)}
-              title="Switch 3: Click lever to throw (Normal 30° Left ↔ Reverse 30° Right) | Right-click to dog"
-            >
-              <svg viewBox="0 0 144 116" class="uss-shield-svg">
-                <path
-                  d="M 50,6 L 94,6 Q 102,6 106,14 L 122,30 Q 128,36 120,46 L 88,94 Q 78,106 72,106 Q 66,106 56,94 L 24,46 Q 16,36 22,30 L 38,14 Q 42,6 50,6 Z"
-                  fill="url(#shield-plate-metal)"
-                  stroke="#94a3b8"
-                  stroke-width="1.5"
-                />
-                <text x="72" y="21" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="900" font-family="'Arial', sans-serif">3</text>
-                <text x="72" y="30" text-anchor="middle" fill="#94a3b8" font-size="7.5" font-weight="800" letter-spacing="1">SWITCH</text>
-
-                <text x="36" y="44" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="900" font-family="'Arial', sans-serif">N</text>
-                <text x="108" y="44" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="900" font-family="'Arial', sans-serif">R</text>
-
-                <g class="uss-lever-rotor" transform="translate(72, 94) rotate({switchDemands['3'] === 'Normal' ? -30 : 30})">
+                <!-- Switch 3 Shield Plate & Lever -->
+                <!-- svelte-ignore a11y_click_events_have_key_events -->
+                <!-- svelte-ignore a11y_no_static_element_interactions -->
+                <g class="uss-plate-group" role="button" tabindex="0"
+                  onclick={() => toggleSwitchLever('3')}
+                  oncontextmenu={(e) => cycleDog('switch', '3', e)}
+                >
                   <path
-                    d="M -7,0 C -10,-14 -8,-36 -3,-46 C -1,-50 1,-50 3,-46 C 8,-36 10,-14 7,0 C 4,6 -4,6 -7,0 Z"
-                    fill="url(#paddle-plastic)"
-                    stroke="#0f172a"
-                    stroke-width="1.5"
+                    d="M 50,62 L 94,62 Q 102,62 106,70 L 122,86 Q 128,92 120,102 L 88,144 Q 78,156 72,156 Q 66,156 56,144 L 24,102 Q 16,92 22,86 L 38,70 Q 42,62 50,62 Z"
+                    fill="#0a0a0a"
+                    stroke="#ffffff"
+                    stroke-width="1.8"
                   />
-                  <line x1="0" y1="-46" x2="0" y2="-6" stroke="#f8fafc" stroke-width="2.5" stroke-linecap="round" />
-                  <circle cx="0" cy="0" r="14" fill="url(#hub-chrome)" stroke="#090d16" stroke-width="1.5" />
-                  <circle cx="0" cy="0" r="5" fill="#1e293b" />
+                  <text x="72" y="75" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="900" font-family="'Arial', sans-serif">3</text>
+                  <text x="72" y="85" text-anchor="middle" fill="#cbd5e1" font-size="7.5" font-weight="800" letter-spacing="1">SWITCH</text>
+
+                  <text x="36" y="99" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="900" font-family="'Arial', sans-serif">N</text>
+                  <text x="108" y="99" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="900" font-family="'Arial', sans-serif">R</text>
+
+                  <g class="uss-lever-rotor" transform="translate(72, 144) rotate({switchDemands['3'] === 'Normal' ? -30 : 30})">
+                    <path
+                      d="M -7,0 C -10,-14 -8,-36 -3,-46 C -1,-50 1,-50 3,-46 C 8,-36 10,-14 7,0 C 4,6 -4,6 -7,0 Z"
+                      fill="url(#paddle-plastic)"
+                      stroke="#0f172a"
+                      stroke-width="1.5"
+                    />
+                    <line x1="0" y1="-46" x2="0" y2="-6" stroke="#f8fafc" stroke-width="2.5" stroke-linecap="round" />
+                    <circle cx="0" cy="0" r="14" fill="url(#hub-chrome)" stroke="#090d16" stroke-width="1.5" />
+                    <circle cx="0" cy="0" r="5" fill="#1e293b" />
+                  </g>
                 </g>
-              </svg>
 
-              {#if switchDogs['3'] !== 'none'}
-                <div class="uss-dog-badge dog-{switchDogs['3']}">DOG</div>
-              {/if}
-            </div>
-          </div>
+                <!-- Signal 2 Lamps in 2 Layers -->
+                <circle cx="72" cy="206" r="8" fill={signalAspects['2NAB'] === 'Stop' && signalAspects['2SA'] === 'Stop' ? 'url(#jewel-red-lit)' : 'url(#jewel-red-dark)'} stroke="#cbd5e1" stroke-width="1.5" filter="url(#chrome-glow)" />
+                <circle cx="36" cy="234" r="8" fill={signalAspects['2NAB'] !== 'Stop' ? 'url(#jewel-green-lit)' : 'url(#jewel-green-dark)'} stroke="#cbd5e1" stroke-width="1.5" filter="url(#chrome-glow)" />
+                <circle cx="108" cy="234" r="8" fill={signalAspects['2SA'] !== 'Stop' ? 'url(#jewel-green-lit)' : 'url(#jewel-green-dark)'} stroke="#cbd5e1" stroke-width="1.5" filter="url(#chrome-glow)" />
 
-          <!-- Signal 2 Unit -->
-          <div class="uss-lever-tier">
-            <div class="uss-signal-lamp-cluster">
-              <div class="signal-lamp-stop-top" title="Stop Indication - Red">
-                <span class="uss-jewel-lens jewel-red" class:lit={signalAspects['2NAB'] === 'Stop' && signalAspects['2SA'] === 'Stop'}></span>
-              </div>
-              <div class="signal-lamp-row-bottom">
-                <div class="jewel-mount left-mount" title="Left Permissive (2NAB) - Green">
-                  <span class="uss-jewel-lens jewel-green" class:lit={signalAspects['2NAB'] !== 'Stop'}></span>
-                </div>
-                <div class="jewel-mount right-mount" title="Right Permissive (2SA) - Green">
-                  <span class="uss-jewel-lens jewel-green" class:lit={signalAspects['2SA'] !== 'Stop'}></span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Signal 2 Shield Plate & Lever -->
-            <!-- svelte-ignore a11y_click_events_have_key_events -->
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <div
-              class="uss-lever-shield-container"
-              onclick={() => cycleSignalLever('2')}
-              oncontextmenu={(e) => cycleDog('signal', '2', e)}
-              title="Signal 2: Click lever to throw (Left 30° ↔ Stop Center 0° ↔ Right 30°) | Right-click to dog"
-            >
-              <svg viewBox="0 0 144 116" class="uss-shield-svg">
-                <path
-                  d="M 50,6 L 94,6 Q 102,6 106,14 L 122,30 Q 128,36 120,46 L 88,94 Q 78,106 72,106 Q 66,106 56,94 L 24,46 Q 16,36 22,30 L 38,14 Q 42,6 50,6 Z"
-                  fill="url(#shield-plate-metal)"
-                  stroke="#94a3b8"
-                  stroke-width="1.5"
-                />
-                <text x="72" y="21" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="900" font-family="'Arial', sans-serif">2</text>
-                <text x="72" y="30" text-anchor="middle" fill="#94a3b8" font-size="7.5" font-weight="800" letter-spacing="1">SIGNAL</text>
-
-                <text x="36" y="44" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="900" font-family="'Arial', sans-serif">L</text>
-                <text x="72" y="42" text-anchor="middle" fill="#ffffff" font-size="8.5" font-weight="900" font-family="'Arial', sans-serif">STOP</text>
-                <text x="108" y="44" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="900" font-family="'Arial', sans-serif">R</text>
-
-                <g class="uss-lever-rotor" transform="translate(72, 94) rotate({signalDemands['2'] === 'Left' ? -30 : signalDemands['2'] === 'Right' ? 30 : 0})">
+                <!-- Signal 2 Shield Plate & Lever -->
+                <!-- svelte-ignore a11y_click_events_have_key_events -->
+                <!-- svelte-ignore a11y_no_static_element_interactions -->
+                <g class="uss-plate-group" role="button" tabindex="0"
+                  onclick={() => cycleSignalLever('2')}
+                  oncontextmenu={(e) => cycleDog('signal', '2', e)}
+                >
                   <path
-                    d="M -7,0 C -10,-14 -8,-36 -3,-46 C -1,-50 1,-50 3,-46 C 8,-36 10,-14 7,0 C 4,6 -4,6 -7,0 Z"
-                    fill="url(#paddle-plastic)"
-                    stroke="#0f172a"
-                    stroke-width="1.5"
+                    d="M 50,254 L 94,254 Q 102,254 106,262 L 122,278 Q 128,284 120,294 L 88,336 Q 78,348 72,348 Q 66,348 56,336 L 24,294 Q 16,284 22,278 L 38,262 Q 42,254 50,254 Z"
+                    fill="#0a0a0a"
+                    stroke="#ffffff"
+                    stroke-width="1.8"
                   />
-                  <line x1="0" y1="-46" x2="0" y2="-6" stroke="#f8fafc" stroke-width="2.5" stroke-linecap="round" />
-                  <circle cx="0" cy="0" r="14" fill="url(#hub-chrome)" stroke="#090d16" stroke-width="1.5" />
-                  <circle cx="0" cy="0" r="5" fill="#1e293b" />
+                  <text x="72" y="267" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="900" font-family="'Arial', sans-serif">2</text>
+                  <text x="72" y="277" text-anchor="middle" fill="#cbd5e1" font-size="7.5" font-weight="800" letter-spacing="1">SIGNAL</text>
+
+                  <text x="36" y="291" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="900" font-family="'Arial', sans-serif">L</text>
+                  <text x="72" y="290" text-anchor="middle" fill="#ffffff" font-size="8.5" font-weight="900" font-family="'Arial', sans-serif">STOP</text>
+                  <text x="108" y="291" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="900" font-family="'Arial', sans-serif">R</text>
+
+                  <g class="uss-lever-rotor" transform="translate(72, 336) rotate({signalDemands['2'] === 'Left' ? -30 : signalDemands['2'] === 'Right' ? 30 : 0})">
+                    <path
+                      d="M -7,0 C -10,-14 -8,-36 -3,-46 C -1,-50 1,-50 3,-46 C 8,-36 10,-14 7,0 C 4,6 -4,6 -7,0 Z"
+                      fill="url(#paddle-plastic)"
+                      stroke="#0f172a"
+                      stroke-width="1.5"
+                    />
+                    <line x1="0" y1="-46" x2="0" y2="-6" stroke="#f8fafc" stroke-width="2.5" stroke-linecap="round" />
+                    <circle cx="0" cy="0" r="14" fill="url(#hub-chrome)" stroke="#090d16" stroke-width="1.5" />
+                    <circle cx="0" cy="0" r="5" fill="#1e293b" />
+                  </g>
                 </g>
-              </svg>
 
-              {#if signalDogs['2'] !== 'none'}
-                <div class="uss-dog-badge dog-{signalDogs['2']}">DOG</div>
-              {/if}
-            </div>
-          </div>
-
-          <!-- Code Button 2 -->
-          <div class="code-button-mount">
-            <button class="uss-round-code-button" onclick={() => punchCodeButton(2)} title="Punch to transmit atomic snapshot">
-              <div class="round-button-outer-rim">
-                <div class="round-button-piston">
-                  <span class="button-piston-text">2</span>
-                </div>
-              </div>
-            </button>
-          </div>
-        </div>
-
-        <!-- COLUMN 3: Active Station Column 3 (Derail 5 / Electric Lock) -->
-        <div class="uss-column-bay">
-          <!-- Switch 5 (Electric Lock / Derail) Unit: Green=N=LOCKED / Red=R=UNLOCKED -->
-          <div class="uss-lever-tier">
-            <div class="uss-switch-lamp-cluster">
-              <div class="jewel-mount left-mount" title="Locked (5NWK) - Green">
-                <span class="uss-jewel-lens jewel-green" class:lit={switchFieldStatus['5'] === 'Normal'}></span>
-              </div>
-              <div class="jewel-mount right-mount" title="Unlocked (5RWK) - Red">
-                <span class="uss-jewel-lens jewel-red" class:lit={switchFieldStatus['5'] === 'Reverse'}></span>
-              </div>
-            </div>
-
-            <!-- Lock 5 Shield Plate & Lever -->
-            <!-- svelte-ignore a11y_click_events_have_key_events -->
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <div
-              class="uss-lever-shield-container"
-              onclick={() => toggleSwitchLever('5')}
-              oncontextmenu={(e) => cycleDog('switch', '5', e)}
-              title="Lock 5: Click lever to throw (Locked 30° Left ↔ Unlocked 30° Right) | Right-click to dog"
-            >
-              <svg viewBox="0 0 144 116" class="uss-shield-svg">
-                <path
-                  d="M 50,6 L 94,6 Q 102,6 106,14 L 122,30 Q 128,36 120,46 L 88,94 Q 78,106 72,106 Q 66,106 56,94 L 24,46 Q 16,36 22,30 L 38,14 Q 42,6 50,6 Z"
-                  fill="url(#shield-plate-metal)"
-                  stroke="#94a3b8"
-                  stroke-width="1.5"
-                />
-                <text x="72" y="21" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="900" font-family="'Arial', sans-serif">5</text>
-                <text x="72" y="30" text-anchor="middle" fill="#94a3b8" font-size="7.5" font-weight="800" letter-spacing="1">LOCK</text>
-
-                <text x="36" y="44" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="900" font-family="'Arial', sans-serif">LKD</text>
-                <text x="108" y="44" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="900" font-family="'Arial', sans-serif">UNLKD</text>
-
-                <g class="uss-lever-rotor" transform="translate(72, 94) rotate({switchDemands['5'] === 'Normal' ? -30 : 30})">
-                  <path
-                    d="M -7,0 C -10,-14 -8,-36 -3,-46 C -1,-50 1,-50 3,-46 C 8,-36 10,-14 7,0 C 4,6 -4,6 -7,0 Z"
-                    fill="url(#paddle-plastic)"
-                    stroke="#0f172a"
-                    stroke-width="1.5"
-                  />
-                  <line x1="0" y1="-46" x2="0" y2="-6" stroke="#f8fafc" stroke-width="2.5" stroke-linecap="round" />
-                  <circle cx="0" cy="0" r="14" fill="url(#hub-chrome)" stroke="#090d16" stroke-width="1.5" />
-                  <circle cx="0" cy="0" r="5" fill="#1e293b" />
+                <!-- Code Button 2 -->
+                <!-- svelte-ignore a11y_click_events_have_key_events -->
+                <!-- svelte-ignore a11y_no_static_element_interactions -->
+                <g class="uss-code-button-interactive" role="button" tabindex="0" onclick={() => punchCodeButton(2)} cursor="pointer">
+                  <circle cx="72" cy="436" r="21" fill="url(#button-chrome)" stroke="#94a3b8" stroke-width="2" />
+                  <circle cx="72" cy="436" r="15" fill="url(#hub-chrome)" stroke="#475569" stroke-width="1" />
+                  <text x="72" y="441" text-anchor="middle" fill="#0f172a" font-size="13" font-weight="900" font-family="'Arial', sans-serif">2</text>
                 </g>
-              </svg>
-
-              {#if switchDogs['5'] !== 'none'}
-                <div class="uss-dog-badge dog-{switchDogs['5']}">DOG</div>
               {/if}
-            </div>
-          </div>
-
-          <!-- Blank Lower Section (Matching Signal Holes on Unused Column!) -->
-          <div class="uss-lever-tier blank-tier">
-            <svg viewBox="0 0 144 160" class="uss-blank-tier-svg">
-              <circle cx="72" cy="18" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-              <circle cx="36" cy="44" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-              <circle cx="108" cy="44" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-              <circle cx="72" cy="154" r="14" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-              <circle cx="72" cy="154" r="4" fill="#040609" />
             </svg>
           </div>
-
-          <!-- Code Button 3 -->
-          <div class="code-button-mount">
-            <button class="uss-round-code-button" onclick={() => punchCodeButton(3)} title="Punch to transmit atomic snapshot">
-              <div class="round-button-outer-rim">
-                <div class="round-button-piston">
-                  <span class="button-piston-text">3</span>
-                </div>
-              </div>
-            </button>
-          </div>
-        </div>
-
-        <!-- COLUMN 4: Unused Column with Pre-Punched Empty Holes -->
-        <div class="uss-column-bay unused-column">
-          <svg viewBox="0 0 144 480" class="uss-unused-bay-svg">
-            <circle cx="72" cy="14" r="4.5" fill="#080c12" stroke="#1e2918" stroke-width="1.5" />
-            <circle cx="36" cy="34" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-            <circle cx="108" cy="34" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-            <circle cx="72" cy="144" r="14" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-            <circle cx="72" cy="144" r="4" fill="#040609" />
-            <circle cx="72" cy="180" r="4.5" fill="#080c12" stroke="#1e2918" stroke-width="1.5" />
-            <circle cx="72" cy="198" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-            <circle cx="36" cy="224" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-            <circle cx="108" cy="224" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-            <circle cx="72" cy="334" r="14" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-            <circle cx="72" cy="334" r="4" fill="#040609" />
-            <circle cx="72" cy="438" r="18" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-          </svg>
-        </div>
-
-        <!-- COLUMN 5: Unused Column with Pre-Punched Empty Holes -->
-        <div class="uss-column-bay unused-column">
-          <svg viewBox="0 0 144 480" class="uss-unused-bay-svg">
-            <circle cx="72" cy="14" r="4.5" fill="#080c12" stroke="#1e2918" stroke-width="1.5" />
-            <circle cx="36" cy="34" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-            <circle cx="108" cy="34" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-            <circle cx="72" cy="144" r="14" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-            <circle cx="72" cy="144" r="4" fill="#040609" />
-            <circle cx="72" cy="180" r="4.5" fill="#080c12" stroke="#1e2918" stroke-width="1.5" />
-            <circle cx="72" cy="198" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-            <circle cx="36" cy="224" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-            <circle cx="108" cy="224" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-            <circle cx="72" cy="334" r="14" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-            <circle cx="72" cy="334" r="4" fill="#040609" />
-            <circle cx="72" cy="438" r="18" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-          </svg>
-        </div>
-
-        <!-- COLUMN 6: Unused Column with Pre-Punched Empty Holes -->
-        <div class="uss-column-bay unused-column">
-          <svg viewBox="0 0 144 480" class="uss-unused-bay-svg">
-            <circle cx="72" cy="14" r="4.5" fill="#080c12" stroke="#1e2918" stroke-width="1.5" />
-            <circle cx="36" cy="34" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-            <circle cx="108" cy="34" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-            <circle cx="72" cy="144" r="14" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-            <circle cx="72" cy="144" r="4" fill="#040609" />
-            <circle cx="72" cy="180" r="4.5" fill="#080c12" stroke="#1e2918" stroke-width="1.5" />
-            <circle cx="72" cy="198" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-            <circle cx="36" cy="224" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-            <circle cx="108" cy="224" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-            <circle cx="72" cy="334" r="14" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-            <circle cx="72" cy="334" r="4" fill="#040609" />
-            <circle cx="72" cy="438" r="18" fill="#080c12" stroke="#1e2918" stroke-width="2" />
-          </svg>
-        </div>
+        {/each}
       </div>
     </div>
 </div>
@@ -999,336 +797,36 @@
     border-right: none;
   }
 
-  .uss-lever-tier {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-bottom: 2px;
-  }
-
-  .blank-tier {
-    height: 154px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .blank-indicator {
-    font-size: 11px;
-    font-weight: 800;
-    color: #4a5d3c;
-    letter-spacing: 1.5px;
-  }
-
-  /* Switch Lamp Cluster */
-  .uss-switch-lamp-cluster {
-    position: relative;
+  .uss-column-svg {
     width: 144px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  /* Signal Lamps in TWO Layers */
-  .uss-signal-lamp-cluster {
-    position: relative;
-    width: 144px;
-    height: 46px;
-  }
-
-  .signal-lamp-stop-top {
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .signal-lamp-row-bottom {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 144px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .jewel-mount {
-    position: absolute;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  /* Exactly 36px from edge = 72px center-to-center spacing */
-  .left-mount {
-    left: 28px;
-  }
-
-  .right-mount {
-    right: 28px;
-  }
-
-  .uss-jewel-lens {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    border: 2px solid #cbd5e1;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
-    transition: all 0.15s ease;
-  }
-
-  .jewel-amber {
-    background: radial-gradient(circle at 35% 35%, #78350f, #291004);
-  }
-
-  .jewel-amber.lit {
-    background: radial-gradient(circle at 35% 35%, #fef08a 0%, #f59e0b 50%, #b45309 100%);
-    box-shadow: 0 0 14px #f59e0b, 0 0 28px #d97706;
-    border-color: #fef08a;
-  }
-
-  .jewel-red {
-    background: radial-gradient(circle at 35% 35%, #450a0a, #1c0505);
-  }
-
-  .jewel-red.lit {
-    background: radial-gradient(circle at 35% 35%, #fca5a5 0%, #ef4444 50%, #991b1b 100%);
-    box-shadow: 0 0 14px #ef4444, 0 0 28px #b91c1c;
-    border-color: #fca5a5;
-  }
-
-  .jewel-green {
-    background: radial-gradient(circle at 35% 35%, #052e16, #02150a);
-  }
-
-  .jewel-green.lit {
-    background: radial-gradient(circle at 35% 35%, #86efac 0%, #22c55e 50%, #15803d 100%);
-    box-shadow: 0 0 14px #22c55e, 0 0 28px #15803d;
-    border-color: #86efac;
-  }
-
-  .jewel-letter {
-    font-size: 8px;
-    font-weight: 800;
-    color: #94a3b8;
-    margin-top: 1px;
-  }
-
-  /* US&S Shield Plate & Lever Container */
-  .uss-lever-shield-container {
-    position: relative;
-    width: 144px;
-    height: 116px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-  }
-
-  .uss-shield-svg {
-    width: 144px;
-    height: 116px;
-    overflow: visible;
+    height: 490px;
+    display: block;
   }
 
   .uss-lever-rotor {
     transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
-  /* Pre-Punched Empty Holes on Unused Columns and Blank Tiers */
-  .uss-unused-bay-svg {
-    width: 144px;
-    height: 480px;
-    opacity: 0.6;
-  }
-
-  .uss-blank-tier-svg {
-    width: 144px;
-    height: 160px;
-    opacity: 0.6;
-  }
-
-  /* Code Button Mount: Never cut off */
-  .code-button-mount {
-    margin-top: auto;
-    padding-bottom: 8px;
-    flex-shrink: 0;
-  }
-
-  .uss-round-code-button {
-    width: 44px;
-    height: 44px;
-    background: transparent;
-    border: none;
-    padding: 0;
+  .uss-plate-group {
     cursor: pointer;
   }
 
-  .round-button-outer-rim {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #cbd5e1 0%, #475569 50%, #0f172a 100%);
-    border: 2px solid #94a3b8;
-    padding: 4px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.7), inset 0 1px 2px rgba(255, 255, 255, 0.6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.1s ease;
+  .uss-code-button-interactive {
+    cursor: pointer;
+    transition: transform 0.08s ease;
   }
 
-  .uss-round-code-button:hover .round-button-outer-rim {
-    filter: brightness(1.2);
+  .uss-code-button-interactive:hover {
+    filter: brightness(1.15);
   }
 
-  .uss-round-code-button:active .round-button-outer-rim {
-    transform: scale(0.95);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  .uss-code-button-interactive:active {
+    transform: scale(0.96);
+    filter: brightness(0.9);
   }
 
-  .round-button-piston {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 35% 35%, #ffffff 0%, #cbd5e1 50%, #64748b 100%);
-    border: 1px solid #475569;
-    box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.8), 0 1px 2px rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .button-piston-text {
-    font-size: 13px;
-    font-weight: 900;
-    color: #0f172a;
-  }
-
-  /* Pre-Punched Empty Holes on Unused Machine Columns */
   .unused-column {
-    opacity: 0.6;
-    justify-content: flex-start;
-    gap: 16px;
-    padding-top: 18px;
-  }
-
-  .hole-screw-top,
-  .hole-screw-mid {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #090e15;
-    border: 1.5px solid #1a2416;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.8);
-  }
-
-  .hole-lamps-switch {
-    position: relative;
-    width: 144px;
-    height: 24px;
-    display: flex;
-    justify-content: space-between;
-    padding: 0 28px;
-    box-sizing: border-box;
-  }
-
-  .hole-lamps-signal {
-    position: relative;
-    width: 144px;
-    height: 42px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .punched-hole-center {
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: #080c12;
-    border: 1.5px solid #1e2918;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.9);
-  }
-
-  .punched-hole-row {
-    width: 144px;
-    display: flex;
-    justify-content: space-between;
-    padding: 0 28px;
-    box-sizing: border-box;
-  }
-
-  .punched-hole {
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: #080c12;
-    border: 1.5px solid #1e2918;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.9);
-  }
-
-  .punched-hole-large {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background: #080c12;
-    border: 2px solid #1e2918;
-    box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.95);
-  }
-
-  .punched-hole-button {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: #080c12;
-    border: 2px solid #1e2918;
-    box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.95);
-  }
-
-  .hole-lever-switch,
-  .hole-lever-signal {
-    height: 80px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .hole-code-button {
-    margin-top: auto;
-    padding-bottom: 12px;
-  }
-
-  /* Mechanical Blocking Dogs */
-  .uss-dog-badge {
-    position: absolute;
-    top: 0;
-    right: -4px;
-    font-size: 8px;
-    font-weight: 900;
-    padding: 2px 4px;
-    border-radius: 3px;
-    color: #ffffff;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
-    z-index: 10;
-  }
-
-  .dog-red {
-    background: #dc2626;
-    border: 1px solid #fca5a5;
-  }
-
-  .dog-blue {
-    background: #2563eb;
-    border: 1px solid #93c5fd;
+    opacity: 0.75;
   }
 
   .text-red {
