@@ -124,10 +124,17 @@ impl<'a> RouteSynthesizer<'a> {
         };
 
         let is_straight = alignments.values().all(|p| *p == SwitchPosition::Normal);
-        let route_name = format!("{}-to-{}", mast.name, exit_node);
+
+        // Derive geographic corridor name (e.g. WEST-to-EAST_MAIN, WEST-to-EAST_SIDING)
+        let entrance_name = match mast.direction {
+            Direction::Right => "WEST",
+            Direction::Left => "EAST",
+        };
+        let exit_clean = exit_node.trim_start_matches("B_").trim_start_matches("IRJ_");
+        let route_name = format!("{}-to-{}", entrance_name, exit_clean);
 
         SynthesizedRoute {
-            id: format!("RT_{}_{}", mast.id, exit_node),
+            id: format!("RT_{}_{}", mast.id, exit_clean),
             name: route_name,
             entrance_signal_id: mast.id.clone(),
             exit_node_id: exit_node.to_string(),
