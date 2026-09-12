@@ -406,6 +406,31 @@
         />
       {/each}
 
+      <!-- Vertical 2" Station Column Grid Lines (140px spacing aligned with cTc lever plates) -->
+      {#each [80, 220, 360, 500, 640, 780, 920, 1060] as colX, idx}
+        <line
+          x1={colX}
+          y1="-500"
+          x2={colX}
+          y2="800"
+          stroke="#1e293b"
+          stroke-width="1.2"
+          stroke-dasharray="4 8"
+        />
+        <text
+          x={colX}
+          y="-15"
+          text-anchor="middle"
+          fill="#475569"
+          font-size="9"
+          font-family="monospace"
+          font-weight="600"
+          letter-spacing="0.5"
+        >
+          COL {idx}
+        </text>
+      {/each}
+
       {#if studio.project}
         <!-- Dynamic Control Point Boundary Box -->
         <!-- Automatically updates size and position when boundary IRJs move -->
