@@ -116,6 +116,7 @@
         if (createdId) {
           studio.snapAndMerge(createdId);
         }
+        studio.activeTool = null; // Disarm after connecting
         return;
       }
 
@@ -281,20 +282,24 @@
     if (isGroupDragging) {
       isGroupDragging = false;
       if (hasDragged) {
+        // Run snap and merge for all nodes that were dragged in the group
+        for (const id of [...studio.selectedNodeIds]) {
+          studio.snapAndMerge(id);
+        }
         studio.saveSnapshot();
         studio.runDrc();
         studio.synthesizeRoutes();
       }
-    }
-
-    if (isMarquee) {
-      studio.selectNodesInBox(marqueeStart.x, marqueeStart.y, marqueeCurrent.x, marqueeCurrent.y);
-      isMarquee = false;
     } else if (draggingNodeId) {
       if (hasDragged) {
         studio.snapAndMerge(draggingNodeId);
       }
       draggingNodeId = null;
+    }
+
+    if (isMarquee) {
+      studio.selectNodesInBox(marqueeStart.x, marqueeStart.y, marqueeCurrent.x, marqueeCurrent.y);
+      isMarquee = false;
     }
 
     hasDragged = false;
