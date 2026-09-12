@@ -76,19 +76,19 @@
     };
   });
 
-  // Toggle switch lever (60° detent throw)
+  // Toggle switch lever (US&S 60° detent throw)
   function toggleSwitchLever(swId: string) {
-    if (switchDogs[swId] !== 'none') return; // Blocked by mechanical dog
-    switchDemands[swId] = switchDemands[swId] === 'Normal' ? 'Reverse' : 'Normal';
+    if (switchDogs[swId] !== 'none') return;
+    const next = switchDemands[swId] === 'Normal' ? 'Reverse' : 'Normal';
+    switchDemands = { ...switchDemands, [swId]: next };
   }
 
-  // Cycle signal lever (45° detents: Left -> Stop -> Right -> Stop)
+  // Cycle signal lever (US&S 45° detents: Left -> Stop -> Right -> Stop)
   function cycleSignalLever(sigId: string) {
     if (signalDogs[sigId] !== 'none') return;
     const current = signalDemands[sigId];
-    if (current === 'Stop') signalDemands[sigId] = 'Left';
-    else if (current === 'Left') signalDemands[sigId] = 'Right';
-    else signalDemands[sigId] = 'Stop';
+    const next = current === 'Stop' ? 'Left' : current === 'Left' ? 'Right' : 'Stop';
+    signalDemands = { ...signalDemands, [sigId]: next };
   }
 
   // Clamp / remove mechanical blocking dog on right click
@@ -96,25 +96,25 @@
     event.preventDefault();
     if (type === 'switch') {
       const curr = switchDogs[id];
-      switchDogs[id] = curr === 'none' ? 'red' : curr === 'red' ? 'blue' : 'none';
+      const next = curr === 'none' ? 'red' : curr === 'red' ? 'blue' : 'none';
+      switchDogs = { ...switchDogs, [id]: next };
     } else {
       const curr = signalDogs[id];
-      signalDogs[id] = curr === 'none' ? 'red' : curr === 'red' ? 'blue' : 'none';
+      const next = curr === 'none' ? 'red' : curr === 'red' ? 'blue' : 'none';
+      signalDogs = { ...signalDogs, [id]: next };
     }
   }
 
   // Toggle track occupancy (interactive shunt testing)
   function toggleShunt(circuitId: string) {
-    trackOccupancy[circuitId] = !trackOccupancy[circuitId];
+    trackOccupancy = { ...trackOccupancy, [circuitId]: !trackOccupancy[circuitId] };
 
     // Vital safety: if train shunts an island while signal is clear, instant knockdown to Stop!
     if (trackOccupancy['3T1'] || trackOccupancy['1T1']) {
-      signalAspects['2NAB'] = 'Stop';
-      signalAspects['2SA'] = 'Stop';
+      signalAspects = { ...signalAspects, '2NAB': 'Stop', '2SA': 'Stop' };
     }
     if (trackOccupancy['5T1'] || trackOccupancy['1T1']) {
-      signalAspects['4NA'] = 'Stop';
-      signalAspects['4SA'] = 'Stop';
+      signalAspects = { ...signalAspects, '4NA': 'Stop', '4SA': 'Stop' };
     }
   }
 
@@ -131,10 +131,10 @@
     const isLocked = trackOccupancy[island] || (sigId && timeLockSeconds[sigId] > 0);
 
     if (!isLocked && switchFieldStatus[swId] !== demandedPos) {
-      switchFieldStatus[swId] = 'Moving';
+      switchFieldStatus = { ...switchFieldStatus, [swId]: 'Moving' };
       // Simulate Tortoise motor travel time (2.0 seconds)
       setTimeout(() => {
-        switchFieldStatus[swId] = demandedPos;
+        switchFieldStatus = { ...switchFieldStatus, [swId]: demandedPos };
         evaluatePlantRoutes();
       }, 2000);
     }
@@ -144,7 +144,7 @@
       const demandedSig = signalDemands[sigId];
       // If signal was previously permissive and dispatcher forces it to Stop: engage time lock!
       if (demandedSig === 'Stop' && (signalAspects['2NAB'] !== 'Stop' || signalAspects['2SA'] !== 'Stop')) {
-        timeLockSeconds[sigId] = 15; // 15s time lock countdown for simulation
+        timeLockSeconds = { ...timeLockSeconds, [sigId]: 15 }; // 15s time lock countdown for simulation
       }
     }
 
@@ -329,172 +329,216 @@
     </svg>
   </div>
 
-  <!-- LOWER SECTION: The Vertical cTc Station Lever Deck -->
+  <!-- LOWER SECTION: The US&S Vertical Station Lever Deck -->
   <div class="lever-deck-section">
     <!-- STATION COLUMN 1 (Switch 1 & Signal 4) -->
     <div class="station-plate">
-      <div class="plate-label">STATION 1</div>
-      <!-- Switch 1 Section -->
-      <div class="lever-slot switch-slot">
-        <div class="lamp-row">
-          <span class="lamp lamp-white" class:lit={switchFieldStatus['1'] === 'Normal'}>●</span>
-          <span class="lamp-name">1</span>
-          <span class="lamp lamp-amber" class:lit={switchFieldStatus['1'] === 'Reverse'}>●</span>
+      <div class="column-nameplate">STATION 1</div>
+
+      <!-- US&S Switch 1 Unit -->
+      <div class="uss-lever-group">
+        <div class="jewel-cluster">
+          <div class="jewel-socket" title="Normal Correspondence (1NWK)">
+            <span class="uss-jewel jewel-opal" class:lit={switchFieldStatus['1'] === 'Normal'}>●</span>
+            <span class="jewel-tag">N</span>
+          </div>
+          <span class="plate-number">1</span>
+          <div class="jewel-socket" title="Reverse Correspondence (1RWK)">
+            <span class="uss-jewel jewel-amber" class:lit={switchFieldStatus['1'] === 'Reverse'}>●</span>
+            <span class="jewel-tag">R</span>
+          </div>
         </div>
-        <!-- 60° Detent Switch Lever -->
+
+        <!-- US&S Teardrop/Paddle Switch Lever (0° Normal up, 60° Reverse down-right) -->
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
-          class="switch-lever"
+          class="uss-switch-lever"
           class:reverse={switchDemands['1'] === 'Reverse'}
           onclick={() => toggleSwitchLever('1')}
           oncontextmenu={(e) => cycleDog('switch', '1', e)}
           title="Click to throw (60° detent) | Right-click to apply/remove dog"
         >
-          <div class="lever-handle">
-            <div class="lever-pointer">▲</div>
+          <div class="paddle-stem">
+            <div class="paddle-blade"></div>
           </div>
+          <div class="lever-center-hub"></div>
           {#if switchDogs['1'] !== 'none'}
             <div class="blocking-dog dog-{switchDogs['1']}">DOG</div>
           {/if}
         </div>
-        <div class="detent-labels"><span>N</span><span>R</span></div>
-        <div class="appliance-tag">SW 1</div>
+        <div class="detent-notches"><span>N</span><span>R</span></div>
       </div>
 
-      <!-- Signal 4 Section -->
-      <div class="lever-slot signal-slot">
-        <div class="lamp-row">
-          <span class="lamp lamp-green" class:lit={signalAspects['4NA'] !== 'Stop'}>●</span>
-          <span class="lamp lamp-red" class:lit={signalAspects['4NA'] === 'Stop' && signalAspects['4SA'] === 'Stop'}>●</span>
-          <span class="lamp lamp-green" class:lit={signalAspects['4SA'] !== 'Stop'}>●</span>
+      <!-- US&S Signal 4 Unit -->
+      <div class="uss-lever-group">
+        <div class="jewel-cluster three-jewel">
+          <div class="jewel-socket" title="Left Permissive (4NA)">
+            <span class="uss-jewel jewel-green" class:lit={signalAspects['4NA'] !== 'Stop'}>●</span>
+            <span class="jewel-tag">L</span>
+          </div>
+          <div class="jewel-socket" title="Stop Indication">
+            <span class="uss-jewel jewel-red" class:lit={signalAspects['4NA'] === 'Stop' && signalAspects['4SA'] === 'Stop'}>●</span>
+            <span class="jewel-tag">STOP</span>
+          </div>
+          <div class="jewel-socket" title="Right Permissive (4SA)">
+            <span class="uss-jewel jewel-green" class:lit={signalAspects['4SA'] !== 'Stop'}>●</span>
+            <span class="jewel-tag">R</span>
+          </div>
         </div>
-        <!-- 45° Detent Signal Lever -->
+
+        <!-- US&S 3-Position Signal Lever (-45° Left, 0° Stop, +45° Right) -->
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
-          class="signal-lever pos-{signalDemands['4'].toLowerCase()}"
+          class="uss-signal-lever pos-{signalDemands['4'].toLowerCase()}"
           onclick={() => cycleSignalLever('4')}
           oncontextmenu={(e) => cycleDog('signal', '4', e)}
           title="Click to cycle L / STOP / R | Right-click to dog"
         >
-          <div class="lever-handle">
-            <div class="lever-pointer">●</div>
+          <div class="paddle-stem">
+            <div class="paddle-blade"></div>
           </div>
+          <div class="lever-center-hub"></div>
           {#if signalDogs['4'] !== 'none'}
             <div class="blocking-dog dog-{signalDogs['4']}">DOG</div>
           {/if}
         </div>
-        <div class="detent-labels"><span>L</span><span>STOP</span><span>R</span></div>
-        <div class="appliance-tag">SIG 4</div>
+        <div class="detent-notches"><span>L</span><span>STOP</span><span>R</span></div>
       </div>
 
-      <!-- Code Button -->
-      <button class="code-button" onclick={() => punchCodeButton(1)} title="Punch to transmit Interface A snapshot">
-        CODE 1
+      <!-- US&S Machined Metal Code Button -->
+      <button class="uss-code-button" onclick={() => punchCodeButton(1)} title="Punch to transmit atomic snapshot">
+        <div class="button-inner">CODE 1</div>
       </button>
     </div>
 
     <!-- STATION COLUMN 2 (Switch 3 & Signal 2) -->
     <div class="station-plate">
-      <div class="plate-label">STATION 2</div>
-      <!-- Switch 3 Section -->
-      <div class="lever-slot switch-slot">
-        <div class="lamp-row">
-          <span class="lamp lamp-white" class:lit={switchFieldStatus['3'] === 'Normal'}>●</span>
-          <span class="lamp-name">3</span>
-          <span class="lamp lamp-amber" class:lit={switchFieldStatus['3'] === 'Reverse'}>●</span>
+      <div class="column-nameplate">STATION 2</div>
+
+      <!-- US&S Switch 3 Unit -->
+      <div class="uss-lever-group">
+        <div class="jewel-cluster">
+          <div class="jewel-socket" title="Normal Correspondence (3NWK)">
+            <span class="uss-jewel jewel-opal" class:lit={switchFieldStatus['3'] === 'Normal'}>●</span>
+            <span class="jewel-tag">N</span>
+          </div>
+          <span class="plate-number">3</span>
+          <div class="jewel-socket" title="Reverse Correspondence (3RWK)">
+            <span class="uss-jewel jewel-amber" class:lit={switchFieldStatus['3'] === 'Reverse'}>●</span>
+            <span class="jewel-tag">R</span>
+          </div>
         </div>
+
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
-          class="switch-lever"
+          class="uss-switch-lever"
           class:reverse={switchDemands['3'] === 'Reverse'}
           onclick={() => toggleSwitchLever('3')}
           oncontextmenu={(e) => cycleDog('switch', '3', e)}
           title="Click to throw | Right-click to dog"
         >
-          <div class="lever-handle">
-            <div class="lever-pointer">▲</div>
+          <div class="paddle-stem">
+            <div class="paddle-blade"></div>
           </div>
+          <div class="lever-center-hub"></div>
           {#if switchDogs['3'] !== 'none'}
             <div class="blocking-dog dog-{switchDogs['3']}">DOG</div>
           {/if}
         </div>
-        <div class="detent-labels"><span>N</span><span>R</span></div>
-        <div class="appliance-tag">SW 3</div>
+        <div class="detent-notches"><span>N</span><span>R</span></div>
       </div>
 
-      <!-- Signal 2 Section -->
-      <div class="lever-slot signal-slot">
-        <div class="lamp-row">
-          <span class="lamp lamp-green" class:lit={signalAspects['2NAB'] !== 'Stop'}>●</span>
-          <span class="lamp lamp-red" class:lit={signalAspects['2NAB'] === 'Stop' && signalAspects['2SA'] === 'Stop'}>●</span>
-          <span class="lamp lamp-green" class:lit={signalAspects['2SA'] !== 'Stop'}>●</span>
+      <!-- US&S Signal 2 Unit -->
+      <div class="uss-lever-group">
+        <div class="jewel-cluster three-jewel">
+          <div class="jewel-socket" title="Left Permissive (2NAB)">
+            <span class="uss-jewel jewel-green" class:lit={signalAspects['2NAB'] !== 'Stop'}>●</span>
+            <span class="jewel-tag">L</span>
+          </div>
+          <div class="jewel-socket" title="Stop Indication">
+            <span class="uss-jewel jewel-red" class:lit={signalAspects['2NAB'] === 'Stop' && signalAspects['2SA'] === 'Stop'}>●</span>
+            <span class="jewel-tag">STOP</span>
+          </div>
+          <div class="jewel-socket" title="Right Permissive (2SA)">
+            <span class="uss-jewel jewel-green" class:lit={signalAspects['2SA'] !== 'Stop'}>●</span>
+            <span class="jewel-tag">R</span>
+          </div>
         </div>
+
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
-          class="signal-lever pos-{signalDemands['2'].toLowerCase()}"
+          class="uss-signal-lever pos-{signalDemands['2'].toLowerCase()}"
           onclick={() => cycleSignalLever('2')}
           oncontextmenu={(e) => cycleDog('signal', '2', e)}
           title="Click to cycle L / STOP / R | Right-click to dog"
         >
-          <div class="lever-handle">
-            <div class="lever-pointer">●</div>
+          <div class="paddle-stem">
+            <div class="paddle-blade"></div>
           </div>
+          <div class="lever-center-hub"></div>
           {#if signalDogs['2'] !== 'none'}
             <div class="blocking-dog dog-{signalDogs['2']}">DOG</div>
           {/if}
         </div>
-        <div class="detent-labels"><span>L</span><span>STOP</span><span>R</span></div>
-        <div class="appliance-tag">SIG 2</div>
+        <div class="detent-notches"><span>L</span><span>STOP</span><span>R</span></div>
       </div>
 
-      <!-- Code Button -->
-      <button class="code-button" onclick={() => punchCodeButton(2)} title="Punch to transmit Interface A snapshot">
-        CODE 2
+      <!-- US&S Machined Metal Code Button -->
+      <button class="uss-code-button" onclick={() => punchCodeButton(2)} title="Punch to transmit atomic snapshot">
+        <div class="button-inner">CODE 2</div>
       </button>
     </div>
 
     <!-- STATION COLUMN 3 (Derail 5) -->
     <div class="station-plate">
-      <div class="plate-label">STATION 3</div>
-      <!-- Switch 5 (Derail) Section -->
-      <div class="lever-slot switch-slot">
-        <div class="lamp-row">
-          <span class="lamp lamp-red" class:lit={switchFieldStatus['5'] === 'Normal'} title="Derail Active">●</span>
-          <span class="lamp-name">5</span>
-          <span class="lamp lamp-white" class:lit={switchFieldStatus['5'] === 'Reverse'} title="Derail Off">●</span>
+      <div class="column-nameplate">STATION 3</div>
+
+      <!-- US&S Switch 5 (Derail) Unit -->
+      <div class="uss-lever-group">
+        <div class="jewel-cluster">
+          <div class="jewel-socket" title="Derail On (5NWK)">
+            <span class="uss-jewel jewel-red" class:lit={switchFieldStatus['5'] === 'Normal'}>●</span>
+            <span class="jewel-tag">ON</span>
+          </div>
+          <span class="plate-number">5</span>
+          <div class="jewel-socket" title="Derail Off (5RWK)">
+            <span class="uss-jewel jewel-opal" class:lit={switchFieldStatus['5'] === 'Reverse'}>●</span>
+            <span class="jewel-tag">OFF</span>
+          </div>
         </div>
+
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
-          class="switch-lever"
+          class="uss-switch-lever"
           class:reverse={switchDemands['5'] === 'Reverse'}
           onclick={() => toggleSwitchLever('5')}
           oncontextmenu={(e) => cycleDog('switch', '5', e)}
-          title="Normal = Derailing (Up) | Reverse = Aligned (Down)"
+          title="Normal = Derail Active | Reverse = Derail Clear"
         >
-          <div class="lever-handle">
-            <div class="lever-pointer">▲</div>
+          <div class="paddle-stem">
+            <div class="paddle-blade"></div>
           </div>
+          <div class="lever-center-hub"></div>
           {#if switchDogs['5'] !== 'none'}
             <div class="blocking-dog dog-{switchDogs['5']}">DOG</div>
           {/if}
         </div>
-        <div class="detent-labels"><span>ON</span><span>OFF</span></div>
-        <div class="appliance-tag">DERAIL 5</div>
+        <div class="detent-notches"><span>ON</span><span>OFF</span></div>
       </div>
 
-      <!-- Blank Signal Plate -->
-      <div class="lever-slot blank-slot">
-        <div class="blank-plate">[ BLANK ]</div>
+      <!-- Blank Signal Plate for Derail Column -->
+      <div class="uss-lever-group blank-lever-group">
+        <div class="blank-indicator">[ BLANK ]</div>
       </div>
 
-      <!-- Code Button -->
-      <button class="code-button" onclick={() => punchCodeButton(3)} title="Punch to transmit Interface A snapshot">
-        CODE 3
+      <!-- US&S Machined Metal Code Button -->
+      <button class="uss-code-button" onclick={() => punchCodeButton(3)} title="Punch to transmit atomic snapshot">
+        <div class="button-inner">CODE 3</div>
       </button>
     </div>
   </div>
@@ -505,7 +549,7 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    background: #090d16;
+    background: #06090f;
     color: #cbd5e1;
     user-select: none;
     overflow: hidden;
@@ -514,7 +558,7 @@
   .faceplate-banner {
     background: #0f172a;
     border-bottom: 2px solid #1e293b;
-    padding: 10px 20px;
+    padding: 10px 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -533,15 +577,16 @@
     color: #94a3b8;
   }
 
+  /* MODEL BOARD UPPER TIER */
   .model-board-section {
     flex: 1;
-    background: #0b0f19;
-    border-bottom: 3px solid #1e293b;
+    background: #090d16;
+    border-bottom: 4px solid #000000;
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
-    padding: 10px;
+    padding: 12px;
   }
 
   .model-board-svg {
@@ -558,222 +603,262 @@
     stroke: #38bdf8;
   }
 
-  /* LOWER SECTION: Station Lever Deck */
+  /* LOWER TIER: US&S Vertical Station Lever Deck */
   .lever-deck-section {
-    height: 280px;
-    background: #111827;
-    border-top: 2px solid #000000;
+    height: 350px;
+    background: #101622;
+    border-top: 3px solid #1e293b;
     display: flex;
     justify-content: center;
-    gap: 30px;
-    padding: 16px 20px;
+    gap: 40px;
+    padding: 16px 24px;
+    box-shadow: inset 0 6px 12px rgba(0, 0, 0, 0.6);
   }
 
   .station-plate {
-    width: 130px;
+    width: 170px;
     background: #182234;
-    border: 2px solid #334155;
-    border-radius: 6px;
+    border: 3px solid #334155;
+    border-radius: 8px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 10px 8px;
-    box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.05), 0 8px 16px rgba(0, 0, 0, 0.5);
+    padding: 12px 10px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6), inset 0 1px 2px rgba(255, 255, 255, 0.1);
   }
 
-  .plate-label {
-    font-size: 10px;
+  .column-nameplate {
+    font-size: 11px;
     font-weight: 800;
-    color: #94a3b8;
-    letter-spacing: 0.5px;
-    margin-bottom: 6px;
-  }
-
-  .lever-slot {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    color: #e2e8f0;
+    letter-spacing: 0.6px;
+    background: #0f172a;
+    padding: 3px 14px;
+    border-radius: 4px;
+    border: 1px solid #334155;
     margin-bottom: 12px;
   }
 
-  .lamp-row {
+  .uss-lever-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 14px;
+    width: 100%;
+  }
+
+  .jewel-cluster {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 4px;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 6px;
   }
 
-  .lamp {
-    font-size: 13px;
+  .jewel-cluster.three-jewel {
+    gap: 10px;
+  }
+
+  .jewel-socket {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .jewel-tag {
+    font-size: 8px;
+    font-weight: 800;
+    color: #64748b;
+    margin-top: 1px;
+  }
+
+  .plate-number {
+    font-size: 12px;
+    font-weight: 900;
+    color: #cbd5e1;
+  }
+
+  /* Authentic US&S Faceted Glass Jewel Lamps with Chrome Rim */
+  .uss-jewel {
+    font-size: 16px;
     opacity: 0.25;
-    transition: opacity 0.15s ease;
+    transition: all 0.15s ease;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
   }
 
-  .lamp.lit {
+  .uss-jewel.lit {
     opacity: 1;
   }
 
-  .lamp-white.lit {
+  .jewel-opal.lit {
     color: #ffffff;
-    text-shadow: 0 0 8px #ffffff;
+    text-shadow: 0 0 10px #ffffff, 0 0 20px #e0f2fe;
   }
 
-  .lamp-amber.lit {
+  .jewel-amber.lit {
     color: #f59e0b;
-    text-shadow: 0 0 8px #f59e0b;
+    text-shadow: 0 0 10px #f59e0b, 0 0 20px #d97706;
   }
 
-  .lamp-red.lit {
+  .jewel-red.lit {
     color: #ef4444;
-    text-shadow: 0 0 8px #ef4444;
+    text-shadow: 0 0 10px #ef4444, 0 0 20px #b91c1c;
   }
 
-  .lamp-green.lit {
+  .jewel-green.lit {
     color: #22c55e;
-    text-shadow: 0 0 8px #22c55e;
+    text-shadow: 0 0 10px #22c55e, 0 0 20px #15803d;
   }
 
-  .lamp-name {
-    font-size: 10px;
-    font-weight: 700;
-    color: #94a3b8;
-  }
-
-  /* 60° Detent Switch Lever */
-  .switch-lever {
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    background: #0f172a;
-    border: 2px solid #475569;
+  /* Large Authentic US&S Teardrop/Paddle Handle Levers */
+  .uss-switch-lever,
+  .uss-signal-lever {
+    width: 64px;
+    height: 64px;
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    position: relative;
-    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  /* Switch Lever: 0° Normal up, 60° Reverse down-right */
+  .uss-switch-lever {
     transform: rotate(0deg);
   }
 
-  .switch-lever.reverse {
+  .uss-switch-lever.reverse {
     transform: rotate(60deg);
   }
 
-  .lever-handle {
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: #cbd5e1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
-  }
-
-  .lever-pointer {
-    font-size: 8px;
-    color: #0f172a;
-    font-weight: 900;
-  }
-
-  /* 45° Detent Signal Lever */
-  .signal-lever {
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    background: #0f172a;
-    border: 2px solid #475569;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    position: relative;
-    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-
-  .signal-lever.pos-left {
+  /* Signal Lever: -45° Left, 0° Stop, +45° Right */
+  .uss-signal-lever.pos-left {
     transform: rotate(-45deg);
   }
 
-  .signal-lever.pos-stop {
+  .uss-signal-lever.pos-stop {
     transform: rotate(0deg);
   }
 
-  .signal-lever.pos-right {
+  .uss-signal-lever.pos-right {
     transform: rotate(45deg);
   }
 
-  .detent-labels {
+  .paddle-stem {
+    position: absolute;
+    bottom: 24px;
+    width: 10px;
+    height: 36px;
+    background: linear-gradient(90deg, #334155, #64748b, #334155);
+    border-radius: 4px 4px 2px 2px;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.6);
+  }
+
+  .paddle-blade {
+    position: absolute;
+    top: -8px;
+    left: -4px;
+    width: 18px;
+    height: 14px;
+    background: #cbd5e1;
+    border-radius: 4px;
+    border: 1px solid #94a3b8;
+    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.6);
+  }
+
+  .lever-center-hub {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #e2e8f0 30%, #475569 80%);
+    border: 2px solid #0f172a;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.7);
+    z-index: 2;
+  }
+
+  .detent-notches {
     display: flex;
     justify-content: space-between;
-    width: 50px;
-    font-size: 8px;
-    font-weight: 700;
-    color: #64748b;
-    margin-top: 2px;
-  }
-
-  .appliance-tag {
+    width: 60px;
     font-size: 9px;
     font-weight: 800;
-    color: #38bdf8;
-    margin-top: 2px;
+    color: #94a3b8;
+    margin-top: 4px;
   }
 
-  .code-button {
+  /* Large Machined Metal US&S Code Button */
+  .uss-code-button {
     margin-top: auto;
-    background: linear-gradient(180deg, #94a3b8, #64748b);
-    border: 2px solid #e2e8f0;
-    color: #0f172a;
-    font-size: 10px;
-    font-weight: 900;
-    padding: 6px 14px;
-    border-radius: 4px;
+    width: 100px;
+    height: 38px;
+    background: linear-gradient(180deg, #cbd5e1, #64748b);
+    border: 2px solid #f1f5f9;
+    border-radius: 6px;
+    padding: 2px;
     cursor: pointer;
-    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.8);
+    transition: all 0.1s ease;
   }
 
-  .code-button:hover {
-    background: #cbd5e1;
+  .uss-code-button:hover {
+    filter: brightness(1.1);
   }
 
-  .code-button:active {
+  .uss-code-button:active {
     transform: translateY(2px);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
   }
 
-  .blank-slot {
-    height: 60px;
+  .button-inner {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(180deg, #e2e8f0, #94a3b8);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 900;
+    color: #0f172a;
+    letter-spacing: 0.5px;
+  }
+
+  .blank-lever-group {
+    height: 80px;
     display: flex;
     align-items: center;
     justify-content: center;
   }
 
-  .blank-plate {
-    font-size: 9px;
+  .blank-indicator {
+    font-size: 10px;
+    font-weight: 700;
     color: #475569;
-    font-weight: 600;
   }
 
-  /* Mechanical Blocking Dogs */
+  /* Mechanical Blocking Dogs (Red / Blue Collars) */
   .blocking-dog {
     position: absolute;
-    top: -6px;
-    right: -10px;
-    font-size: 7px;
+    top: -8px;
+    right: -12px;
+    font-size: 8px;
     font-weight: 900;
-    padding: 1px 3px;
-    border-radius: 2px;
+    padding: 2px 4px;
+    border-radius: 3px;
     color: #ffffff;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.7);
+    z-index: 10;
   }
 
   .dog-red {
     background: #dc2626;
+    border: 1px solid #fca5a5;
   }
 
   .dog-blue {
     background: #2563eb;
+    border: 1px solid #93c5fd;
   }
 
   .text-red {
