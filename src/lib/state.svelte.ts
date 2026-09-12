@@ -566,7 +566,7 @@ export class StudioState {
       if (alreadyConnected) continue;
 
       const dist = Math.hypot(draggedNode.x - targetNode.x, draggedNode.y - targetNode.y);
-      if (dist <= 26) {
+      if (dist <= 36) {
         // Case A: Dragging SwitchPoints onto a Boundary (extend mainline/siding)
         if ('SwitchPoints' in draggedNode.kind && 'Boundary' in targetNode.kind) {
           for (const edge of this.project.graph.edges) {
@@ -595,26 +595,14 @@ export class StudioState {
           return;
         }
 
-        // Case B: Dragging SwitchPoints onto a Bumper (extending spur track into a new switch)
+        // Case B: Dragging or stamping SwitchPoints onto a Bumper (extend spur into switch)
         if ('SwitchPoints' in draggedNode.kind && 'Bumper' in targetNode.kind) {
           for (const edge of this.project.graph.edges) {
             if (edge.to === targetId) {
               edge.to = draggedId;
             }
-          }
-          delete this.project.graph.nodes[targetId];
-
-          this.selectNode(draggedId, false);
-          this.runDrc();
-          this.synthesizeRoutes();
-          return;
-        }
-
-        // Case C: Dropping SwitchPoints onto a Bumper (extend spur into switch)
-        if ('SwitchPoints' in draggedNode.kind && 'Bumper' in targetNode.kind) {
-          for (const edge of this.project.graph.edges) {
-            if (edge.to === targetId) {
-              edge.to = draggedId;
+            if (edge.from === targetId) {
+              edge.from = draggedId;
             }
           }
           delete this.project.graph.nodes[targetId];
@@ -629,9 +617,8 @@ export class StudioState {
           return;
         }
 
-        // Case D: Dropping SwitchPoints near an IRJ (signals bind to IRJ; connect switch downstream of IRJ)
+        // Case C: Dropping SwitchPoints near an IRJ (signals bind to IRJ; connect switch downstream of IRJ)
         if ('SwitchPoints' in draggedNode.kind && 'Irj' in targetNode.kind) {
-          // Keep the IRJ and its signal intact; connect track from IRJ to switch points
           this.project.graph.edges.push({
             id: `E_CONN_${Date.now().toString().slice(-4)}`,
             from: targetId,
@@ -649,7 +636,6 @@ export class StudioState {
           this.synthesizeRoutes();
           return;
         }
-
         // Case D: Dragging a dummy junction onto an existing node
         if ('Junction' in draggedNode.kind) {
           for (const edge of this.project.graph.edges) {

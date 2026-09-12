@@ -99,11 +99,11 @@
 
     // 1. If an appliance tool is armed in the palette, stamp a new appliance and drag it
     if (studio.activeTool && event.button === 0) {
-      // Check if clicking directly on an existing node (e.g. Bumper or IRJ)
+      // Check if clicking directly on an existing node (e.g. Bumper or IRJ) within generous 36px snap radius
       let hitNodeId: string | null = null;
       if (studio.project) {
         for (const [id, node] of Object.entries(studio.project.graph.nodes)) {
-          if (Math.hypot(canvasX - node.x, canvasY - node.y) <= 24) {
+          if (Math.hypot(canvasX - node.x, canvasY - node.y) <= 36) {
             hitNodeId = id;
             break;
           }
