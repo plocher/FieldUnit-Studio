@@ -16,4 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Proper US&S switch lever angles (-30° Normal / +30° Reverse) and signal lever angles (-30° L / 0° STOP / +30° R).
   - Searchlight signal repeater heads oriented horizontally along track paths.
   - Interlocked Derail 5 operation coupled with Switch 1.
-  - Interface "A" vital interlocking simulation: Tortoise motor travel delays, detector locking on island track circuits, approach time locking countdowns, and automatic signal knockdown upon route occupancy.
+- **MQTT Interface "A" Codeline Integration** (`src-tauri`, `CtcConsole.svelte`):
+  - Added `rumqttc` async MQTT client to the Rust backend.
+  - Implemented `AarCodec` (`src-tauri/src/core/aar_codec.rs`) for parsing AAR indication tokens (`*K`) and formatting AAR control tokens (`*S`).
+  - Added 5 unit tests validating AAR token parsing, moving switch correspondence, time lock detection, and control sequence formatting.
+  - Implemented `MqttCodelineManager` (`src-tauri/src/core/mqtt_codeline.rs`) subscribing to `/layout/<name>/codeline/<cp>/[indications, json, telemetry]` and publishing to `.../controls`.
+  - Added Studio Role 4: authoritative publication of retained plant JSON specifications to `.../json`, plus discovery and read APIs (`codeline_get_plant_json`, `codeline_list_known_plants`) for loading existing broker configurations.
+  - Wired `CtcConsole.svelte` to live `codeline:indication` events and code button control transmission, with graceful fallback to standalone local operation when no broker is present.

@@ -390,3 +390,20 @@ fn test_corridor_matrix_coordinate_projection() {
     assert_eq!(coords.get("NODE_A"), Some(&(100.0, 200.0)));
     assert_eq!(coords.get("NODE_B"), Some(&(400.0, 280.0)));
 }
+
+#[test]
+fn test_mqtt_codeline_manager_plant_json_cache() {
+    use super::mqtt_codeline::MqttCodelineManager;
+    let manager = MqttCodelineManager::new();
+
+    // Initially no known plants
+    assert!(manager.list_known_plants().is_empty());
+    assert_eq!(manager.get_plant_json("CP_Corporal"), None);
+
+    // Cache plant locally (as publish_plant_json does)
+    let sample_json = r#"{"name": "CP_Corporal"}"#;
+    let _ = manager.publish_plant_json("CP_Corporal", sample_json);
+
+    assert_eq!(manager.get_plant_json("CP_Corporal"), Some(sample_json.to_string()));
+    assert_eq!(manager.list_known_plants(), vec!["CP_Corporal".to_string()]);
+}

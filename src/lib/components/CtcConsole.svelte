@@ -1,6 +1,13 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { invoke } from '@tauri-apps/api/core';
+  import { listen, type UnlistenFn } from '@tauri-apps/api/event';
   import { studio } from '$lib/state.svelte';
+
+  // Codeline MQTT connection state
+  let codelineStatus = $state<'Connected' | 'Connecting' | 'Disconnected' | string>('Connecting');
+  let codelineLayout = $state('spcoast');
+  let activeCp = $state('CP_Corporal');
 
   // Lever Demands (Dispatcher intent on the console deck)
   let switchDemands = $state<Record<string, 'Normal' | 'Reverse'>>({
@@ -60,6 +67,88 @@
   let transitAlarmActive = $state(false);
 
   onMount(() => {
+    let unlistenIndication: UnlistenFn | null = null;
+    let unlistenStatus: UnlistenFn | null = null;
+
+    // 1. Listen for inbound AAR indications from MQTT Interface "A"
+    listen<{
+      cp_name: string;
+      vector: {
+        switches: Record<string, string>;
+        tracks: Record<string, boolean>;
+        signals: Record<string, string>;
+        time_locks: Record<string, boolean>;
+        maintainer_call: boolean;
+      };
+    }>('codeline:indication', (event) => {
+      const v = event.payload.vector;
+      if (v.switches) {
+        for (const [sw, pos] of Object.entries(v.switches)) {
+          if (pos === 'Normal' || pos === 'Reverse' || pos === 'Moving') {
+            switchFieldStatus[sw] = pos;
+            if (sw === '1') switchFieldStatus['5'] = pos;
+          }
+        }
+      }
+      if (v.tracks) {
+        for (const [tc, occ] of Object.entries(v.tracks)) {
+          trackOccupancy[tc] = occ;
+        }
+      }
+      if (v.signals) {
+        for (const [sig, auth] of Object.entries(v.signals)) {
+          if (sig === '2') {
+            if (auth === 'Left') {
+              signalAspects['2NAB'] = switchFieldStatus['3'] === 'Reverse' ? 'Diverging' : 'Clear';
+              signalAspects['2SA'] = 'Stop';
+            } else if (auth === 'Right') {
+              signalAspects['2SA'] = 'Clear';
+              signalAspects['2NAB'] = 'Stop';
+            } else {
+              signalAspects['2NAB'] = 'Stop';
+              signalAspects['2SA'] = 'Stop';
+            }
+          } else if (sig === '4') {
+            if (auth === 'Left') {
+              signalAspects['4NA'] = 'Restricting';
+              signalAspects['4SA'] = 'Stop';
+            } else if (auth === 'Right') {
+              signalAspects['4SA'] = 'Restricting';
+              signalAspects['4NA'] = 'Stop';
+            } else {
+              signalAspects['4NA'] = 'Stop';
+              signalAspects['4SA'] = 'Stop';
+            }
+          }
+        }
+      }
+      if (v.time_locks) {
+        for (const [sig, tl] of Object.entries(v.time_locks)) {
+          timeLockSeconds[sig] = tl ? 15 : 0;
+        }
+      }
+    }).then((fn) => {
+      unlistenIndication = fn;
+    });
+
+    // 2. Listen for codeline connection state changes
+    listen<string>('codeline:status', (event) => {
+      codelineStatus = event.payload;
+    }).then((fn) => {
+      unlistenStatus = fn;
+    });
+
+    // 3. Connect to MQTT broker (localhost:1883 or LAN broker)
+    invoke('codeline_connect', {
+      host: 'localhost',
+      port: 1883,
+      layout: codelineLayout,
+    }).catch((err) => {
+      console.info('MQTT broker not reachable on localhost:1883, using standalone local mode:', err);
+      codelineStatus = 'Disconnected';
+    });
+
+    // 4. Local time lock countdown ticker
     timeLockInterval = window.setInterval(() => {
       let active = false;
       for (const sig of ['2', '4']) {
@@ -73,6 +162,8 @@
 
     return () => {
       if (timeLockInterval !== null) clearInterval(timeLockInterval);
+      if (unlistenIndication) unlistenIndication();
+      if (unlistenStatus) unlistenStatus();
     };
   });
 
@@ -119,12 +210,39 @@
   }
 
   // Transmit atomic control snapshot for a station column (Code Button press)
-  function punchCodeButton(stationCol: number) {
+  async function punchCodeButton(stationCol: number) {
     const swId = stationCol === 1 ? '1' : '3';
     const sigId = stationCol === 1 ? '4' : '2';
 
-    // 1. Process Switch Command with Detector Lock verification
-    // Switch 1 is interlocked with Derail 5 (like a crossover)
+    const switchesToTransmit = stationCol === 1 ? ['1', '5'] : ['3'];
+    const signalsToTransmit = stationCol === 1 ? ['4'] : ['2'];
+
+    // If connected to MQTT broker, publish live Interface "A" control tokens
+    if (codelineStatus === 'Connected') {
+      try {
+        await invoke('codeline_publish_controls', {
+          cpName: activeCp,
+          switches: switchesToTransmit,
+          signals: signalsToTransmit,
+          snapshot: {
+            cp_name: activeCp,
+            switches: {
+              [swId]: switchDemands[swId],
+              ...(swId === '1' ? { '5': switchDemands['1'] } : {}),
+            },
+            signals: {
+              [sigId]: signalDemands[sigId],
+            },
+            maintainer_call: false,
+          },
+        });
+        return;
+      } catch (err) {
+        console.warn('MQTT publish failed, falling back to local simulation:', err);
+      }
+    }
+
+    // Fallback: local standalone simulation when no broker or field unit is active
     const demandedPos = switchDemands[swId];
     const islandLocked = swId === '1' 
       ? (trackOccupancy['1T1'] || trackOccupancy['5T1']) 
@@ -147,7 +265,6 @@
       }
     }
 
-    // 2. Process Signal Command with Approach Time Locking
     const demandedSig = signalDemands[sigId];
     if (sigId === '2' && demandedSig === 'Stop' && (signalAspects['2NAB'] !== 'Stop' || signalAspects['2SA'] !== 'Stop')) {
       timeLockSeconds = { ...timeLockSeconds, [sigId]: 15 };
@@ -217,7 +334,15 @@
     <div class="faceplate-banner">
       <div class="banner-title">SOUTHERN PACIFIC COAST DIVISION — CP CORPORAL (MP 83.2)</div>
       <div class="banner-status">
-        SYSTEM: INTERFACE "A" ASYNCHRONOUS CODELINE |
+        CODELINE:
+        {#if codelineStatus === 'Connected'}
+          <span class="text-green font-bold">CONNECTED ({codelineLayout} / {activeCp})</span>
+        {:else if codelineStatus === 'Connecting'}
+          <span class="text-amber font-bold">CONNECTING...</span>
+        {:else}
+          <span class="text-slate font-bold">STANDALONE (LOCAL)</span>
+        {/if}
+        |
         {#if transitAlarmActive}
           <span class="text-red font-bold animate-pulse">ALARM: TIME LOCK RUNNING (2TEK)</span>
         {:else}
@@ -835,6 +960,14 @@
 
   .text-green {
     color: #22c55e;
+  }
+
+  .text-amber {
+    color: #f59e0b;
+  }
+
+  .text-slate {
+    color: #94a3b8;
   }
 
   .font-bold {

@@ -1,9 +1,12 @@
 pub mod core;
 
 use std::collections::HashMap;
+use std::sync::Arc;
+use core::aar_codec::ControlSnapshot;
 use core::corridor_matrix::CorridorMatrix;
 use core::graph::{DrcViolation, TrackGraph};
 use core::model::SpeedClass;
+use core::mqtt_codeline::{CodelineStatus, MqttCodelineManager, MqttConfig};
 use core::project::ProjectFile;
 use core::route_synthesizer::{RouteSynthesizer, SynthesizedRoute};
 
@@ -64,10 +67,100 @@ fn matrix_flip_switch(mut matrix: CorridorMatrix, switch_id: String) -> Result<C
     Ok(matrix)
 }
 
+/// Connects to an MQTT broker for Interface "A" codeline communications.
+#[tauri::command]
+fn codeline_connect(
+    state: tauri::State<Arc<MqttCodelineManager>>,
+    host: String,
+    port: u16,
+    layout: String,
+) -> Result<(), String> {
+    state.connect(MqttConfig {
+        host,
+        port,
+        layout,
+        client_id: None,
+    })
+}
+
+/// Disconnects from the MQTT broker.
+#[tauri::command]
+fn codeline_disconnect(state: tauri::State<Arc<MqttCodelineManager>>) -> Result<(), String> {
+    state.disconnect();
+    Ok(())
+}
+
+/// Publishes structured AAR control tokens for a station on /layout/<name>/codeline/<cp>/controls.
+#[tauri::command]
+fn codeline_publish_controls(
+    state: tauri::State<Arc<MqttCodelineManager>>,
+    cp_name: String,
+    switches: Vec<String>,
+    signals: Vec<String>,
+    snapshot: ControlSnapshot,
+) -> Result<(), String> {
+    let sw_refs: Vec<&str> = switches.iter().map(|s| s.as_str()).collect();
+    let sig_refs: Vec<&str> = signals.iter().map(|s| s.as_str()).collect();
+    state.publish_controls(&cp_name, &sw_refs, &sig_refs, &snapshot)
+}
+
+/// Publishes raw AAR control tokens string for a station on /layout/<name>/codeline/<cp>/controls.
+#[tauri::command]
+fn codeline_publish_raw_controls(
+    state: tauri::State<Arc<MqttCodelineManager>>,
+    cp_name: String,
+    tokens: String,
+) -> Result<(), String> {
+    state.publish_raw_controls(&cp_name, &tokens)
+}
+
+/// Role 4: Publishes the authoritative plant JSON specification (retained) to /layout/<name>/codeline/<cp>/json.
+#[tauri::command]
+fn codeline_publish_plant_json(
+    state: tauri::State<Arc<MqttCodelineManager>>,
+    cp_name: String,
+    plant_json: String,
+) -> Result<(), String> {
+    state.publish_plant_json(&cp_name, &plant_json)
+}
+
+/// Role 4: Retrieves retained plant JSON received from the broker or published locally.
+#[tauri::command]
+fn codeline_get_plant_json(
+    state: tauri::State<Arc<MqttCodelineManager>>,
+    cp_name: String,
+) -> Result<Option<String>, String> {
+    Ok(state.get_plant_json(&cp_name))
+}
+
+/// Role 4: Lists all known control point names discovered via /json on the broker.
+#[tauri::command]
+fn codeline_list_known_plants(
+    state: tauri::State<Arc<MqttCodelineManager>>,
+) -> Result<Vec<String>, String> {
+    Ok(state.list_known_plants())
+}
+
+/// Returns the current MQTT connection status.
+#[tauri::command]
+fn codeline_get_status(
+    state: tauri::State<Arc<MqttCodelineManager>>,
+) -> Result<CodelineStatus, String> {
+    Ok(state.get_status())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let codeline_manager = Arc::new(MqttCodelineManager::new());
+    let codeline_clone = Arc::clone(&codeline_manager);
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .manage(codeline_manager)
+        .setup(move |app| {
+            codeline_clone.set_app_handle(app.handle().clone());
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             load_demo_project,
             synthesize_routes,
@@ -76,7 +169,15 @@ pub fn run() {
             project_matrix_coordinates,
             matrix_insert_column,
             matrix_rotate_switch,
-            matrix_flip_switch
+            matrix_flip_switch,
+            codeline_connect,
+            codeline_disconnect,
+            codeline_publish_controls,
+            codeline_publish_raw_controls,
+            codeline_publish_plant_json,
+            codeline_get_plant_json,
+            codeline_list_known_plants,
+            codeline_get_status
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
