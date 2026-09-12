@@ -450,33 +450,33 @@
       <div class="uss-column-bay">
         <div class="uss-column-tag">STATION 1</div>
 
-        <!-- Switch 1 Unit (Lamps at x=36 and x=108, exactly 2" centers from adjacent columns) -->
+        <!-- Switch 1 Unit (Lamps: N=Green, R=Yellow/Amber on 2" centers) -->
         <div class="uss-lever-tier">
-          <div class="uss-jewel-strip">
-            <div class="jewel-mount left-mount" title="Normal Correspondence (1NWK)">
-              <span class="uss-jewel-lens jewel-opal" class:lit={switchFieldStatus['1'] === 'Normal'}></span>
+          <div class="uss-switch-lamp-cluster">
+            <div class="jewel-mount left-mount" title="Normal Correspondence (1NWK) - Green">
+              <span class="uss-jewel-lens jewel-green" class:lit={switchFieldStatus['1'] === 'Normal'}></span>
               <span class="jewel-letter">N</span>
             </div>
             <span class="lever-number-stamp">1</span>
-            <div class="jewel-mount right-mount" title="Reverse Correspondence (1RWK)">
+            <div class="jewel-mount right-mount" title="Reverse Correspondence (1RWK) - Yellow">
               <span class="uss-jewel-lens jewel-amber" class:lit={switchFieldStatus['1'] === 'Reverse'}></span>
               <span class="jewel-letter">R</span>
             </div>
           </div>
 
-          <!-- US&S 2-Position Switch Teardrop Paddle (UP Normal 0° ↔ DOWN Reverse 180° - NEVER CENTERED) -->
+          <!-- US&S 2-Position Switch Lever: 30° Left for Normal ↔ 30° Right for Reverse (Never Straight Up) -->
           <!-- svelte-ignore a11y_click_events_have_key_events -->
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div
             class="uss-lever-pivot-box"
             onclick={() => toggleSwitchLever('1')}
             oncontextmenu={(e) => cycleDog('switch', '1', e)}
-            title="Click lever to throw (Normal UP ↔ Reverse DOWN) | Right-click to dog"
+            title="Click lever to throw (Normal 30° Left ↔ Reverse 30° Right) | Right-click to dog"
           >
-            <!-- 3x-4x Scale Authentic Molded Teardrop Paddle (96px tall, 36px wide) -->
             <svg
               class="uss-large-paddle-svg"
-              class:paddle-reverse={switchDemands['1'] === 'Reverse'}
+              class:paddle-switch-normal={switchDemands['1'] === 'Normal'}
+              class:paddle-switch-reverse={switchDemands['1'] === 'Reverse'}
               viewBox="0 0 72 108"
             >
               <!-- Teardrop Paddle Body (Pivots at x=36, y=72) -->
@@ -488,7 +488,7 @@
               />
               <!-- Molded Pointer Blade Stripe -->
               <line x1="36" y1="6" x2="36" y2="60" stroke="#f8fafc" stroke-width="3" stroke-linecap="round" />
-              <!-- Machined Center Pivot Hub with Hex / Round Boss -->
+              <!-- Machined Center Pivot Hub -->
               <circle cx="36" cy="72" r="20" fill="url(#hub-chrome)" stroke="#090d16" stroke-width="2" />
               <circle cx="36" cy="72" r="8" fill="#1e293b" />
             </svg>
@@ -504,31 +504,36 @@
           </div>
         </div>
 
-        <!-- Signal 4 Unit (3 Lamps on 2" Centers) -->
+        <!-- Signal 4 Unit (2 Layers: Upper Center Red STOP, Lower Left Green L & Right Green R) -->
         <div class="uss-lever-tier">
-          <div class="uss-jewel-strip three-jewels">
-            <div class="jewel-mount left-mount" title="Left Permissive (4NA)">
-              <span class="uss-jewel-lens jewel-green" class:lit={signalAspects['4NA'] !== 'Stop'}></span>
-              <span class="jewel-letter">L</span>
-            </div>
-            <div class="jewel-mount center-mount" title="Stop Indication">
+          <div class="uss-signal-lamp-cluster">
+            <!-- Upper Layer (Center): Red Stop Indication -->
+            <div class="signal-lamp-stop-top" title="Stop Indication - Red">
               <span class="uss-jewel-lens jewel-red" class:lit={signalAspects['4NA'] === 'Stop' && signalAspects['4SA'] === 'Stop'}></span>
               <span class="jewel-letter">STOP</span>
             </div>
-            <div class="jewel-mount right-mount" title="Right Permissive (4SA)">
-              <span class="uss-jewel-lens jewel-green" class:lit={signalAspects['4SA'] !== 'Stop'}></span>
-              <span class="jewel-letter">R</span>
+            <!-- Lower Layer (Left & Right on 2" centers): Green Permissive Indications -->
+            <div class="signal-lamp-row-bottom">
+              <div class="jewel-mount left-mount" title="Left Permissive (4NA) - Green">
+                <span class="uss-jewel-lens jewel-green" class:lit={signalAspects['4NA'] !== 'Stop'}></span>
+                <span class="jewel-letter">L</span>
+              </div>
+              <span class="lever-number-stamp">4</span>
+              <div class="jewel-mount right-mount" title="Right Permissive (4SA) - Green">
+                <span class="uss-jewel-lens jewel-green" class:lit={signalAspects['4SA'] !== 'Stop'}></span>
+                <span class="jewel-letter">R</span>
+              </div>
             </div>
           </div>
 
-          <!-- US&S 3-Position Signal Paddle Lever (-45° Left ↔ 0° Stop ↔ +45° Right) -->
+          <!-- US&S 3-Position Signal Paddle Lever (-30° Left ↔ 0° Stop ↔ +30° Right) -->
           <!-- svelte-ignore a11y_click_events_have_key_events -->
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div
             class="uss-lever-pivot-box"
             onclick={() => cycleSignalLever('4')}
             oncontextmenu={(e) => cycleDog('signal', '4', e)}
-            title="Click lever to throw (Left ↔ Stop ↔ Right) | Right-click to dog"
+            title="Click lever to throw (Left 30° ↔ Stop Center 0° ↔ Right 30°) | Right-click to dog"
           >
             <svg
               class="uss-large-paddle-svg paddle-signal-{signalDemands['4'].toLowerCase()}"
@@ -573,13 +578,13 @@
 
         <!-- Switch 3 Unit -->
         <div class="uss-lever-tier">
-          <div class="uss-jewel-strip">
-            <div class="jewel-mount left-mount" title="Normal Correspondence (3NWK)">
-              <span class="uss-jewel-lens jewel-opal" class:lit={switchFieldStatus['3'] === 'Normal'}></span>
+          <div class="uss-switch-lamp-cluster">
+            <div class="jewel-mount left-mount" title="Normal Correspondence (3NWK) - Green">
+              <span class="uss-jewel-lens jewel-green" class:lit={switchFieldStatus['3'] === 'Normal'}></span>
               <span class="jewel-letter">N</span>
             </div>
             <span class="lever-number-stamp">3</span>
-            <div class="jewel-mount right-mount" title="Reverse Correspondence (3RWK)">
+            <div class="jewel-mount right-mount" title="Reverse Correspondence (3RWK) - Yellow">
               <span class="uss-jewel-lens jewel-amber" class:lit={switchFieldStatus['3'] === 'Reverse'}></span>
               <span class="jewel-letter">R</span>
             </div>
@@ -591,11 +596,12 @@
             class="uss-lever-pivot-box"
             onclick={() => toggleSwitchLever('3')}
             oncontextmenu={(e) => cycleDog('switch', '3', e)}
-            title="Click lever to throw (Normal UP ↔ Reverse DOWN) | Right-click to dog"
+            title="Click lever to throw (Normal 30° Left ↔ Reverse 30° Right) | Right-click to dog"
           >
             <svg
               class="uss-large-paddle-svg"
-              class:paddle-reverse={switchDemands['3'] === 'Reverse'}
+              class:paddle-switch-normal={switchDemands['3'] === 'Normal'}
+              class:paddle-switch-reverse={switchDemands['3'] === 'Reverse'}
               viewBox="0 0 72 108"
             >
               <path
@@ -622,18 +628,21 @@
 
         <!-- Signal 2 Unit -->
         <div class="uss-lever-tier">
-          <div class="uss-jewel-strip three-jewels">
-            <div class="jewel-mount left-mount" title="Left Permissive (2NAB)">
-              <span class="uss-jewel-lens jewel-green" class:lit={signalAspects['2NAB'] !== 'Stop'}></span>
-              <span class="jewel-letter">L</span>
-            </div>
-            <div class="jewel-mount center-mount" title="Stop Indication">
+          <div class="uss-signal-lamp-cluster">
+            <div class="signal-lamp-stop-top" title="Stop Indication - Red">
               <span class="uss-jewel-lens jewel-red" class:lit={signalAspects['2NAB'] === 'Stop' && signalAspects['2SA'] === 'Stop'}></span>
               <span class="jewel-letter">STOP</span>
             </div>
-            <div class="jewel-mount right-mount" title="Right Permissive (2SA)">
-              <span class="uss-jewel-lens jewel-green" class:lit={signalAspects['2SA'] !== 'Stop'}></span>
-              <span class="jewel-letter">R</span>
+            <div class="signal-lamp-row-bottom">
+              <div class="jewel-mount left-mount" title="Left Permissive (2NAB) - Green">
+                <span class="uss-jewel-lens jewel-green" class:lit={signalAspects['2NAB'] !== 'Stop'}></span>
+                <span class="jewel-letter">L</span>
+              </div>
+              <span class="lever-number-stamp">2</span>
+              <div class="jewel-mount right-mount" title="Right Permissive (2SA) - Green">
+                <span class="uss-jewel-lens jewel-green" class:lit={signalAspects['2SA'] !== 'Stop'}></span>
+                <span class="jewel-letter">R</span>
+              </div>
             </div>
           </div>
 
@@ -643,7 +652,7 @@
             class="uss-lever-pivot-box"
             onclick={() => cycleSignalLever('2')}
             oncontextmenu={(e) => cycleDog('signal', '2', e)}
-            title="Click lever to throw (Left ↔ Stop ↔ Right) | Right-click to dog"
+            title="Click lever to throw (Left 30° ↔ Stop Center 0° ↔ Right 30°) | Right-click to dog"
           >
             <svg
               class="uss-large-paddle-svg paddle-signal-{signalDemands['2'].toLowerCase()}"
@@ -681,21 +690,21 @@
         </button>
       </div>
 
-      <!-- STATION COLUMN 3 (Derail 5) - Exactly 144px wide (2.0 inches) -->
+      <!-- STATION COLUMN 3 (Derail 5 / Electric Lock) - Exactly 144px wide (2.0 inches) -->
       <div class="uss-column-bay">
         <div class="uss-column-tag">STATION 3</div>
 
-        <!-- Switch 5 (Derail) Unit -->
+        <!-- Switch 5 (Derail / Electric Lock) Unit: Green=N=LOCKED / Red=R=UNLOCKED -->
         <div class="uss-lever-tier">
-          <div class="uss-jewel-strip">
-            <div class="jewel-mount left-mount" title="Derail On (5NWK)">
-              <span class="uss-jewel-lens jewel-red" class:lit={switchFieldStatus['5'] === 'Normal'}></span>
-              <span class="jewel-letter">ON</span>
+          <div class="uss-switch-lamp-cluster">
+            <div class="jewel-mount left-mount" title="Locked (5NWK) - Green">
+              <span class="uss-jewel-lens jewel-green" class:lit={switchFieldStatus['5'] === 'Normal'}></span>
+              <span class="jewel-letter">LKD</span>
             </div>
             <span class="lever-number-stamp">5</span>
-            <div class="jewel-mount right-mount" title="Derail Off (5RWK)">
-              <span class="uss-jewel-lens jewel-opal" class:lit={switchFieldStatus['5'] === 'Reverse'}></span>
-              <span class="jewel-letter">OFF</span>
+            <div class="jewel-mount right-mount" title="Unlocked (5RWK) - Red">
+              <span class="uss-jewel-lens jewel-red" class:lit={switchFieldStatus['5'] === 'Reverse'}></span>
+              <span class="jewel-letter">UNLKD</span>
             </div>
           </div>
 
@@ -705,11 +714,12 @@
             class="uss-lever-pivot-box"
             onclick={() => toggleSwitchLever('5')}
             oncontextmenu={(e) => cycleDog('switch', '5', e)}
-            title="Normal UP = Derail On | Reverse DOWN = Derail Clear"
+            title="Click lever to throw (Locked 30° Left ↔ Unlocked 30° Right) | Right-click to dog"
           >
             <svg
               class="uss-large-paddle-svg"
-              class:paddle-reverse={switchDemands['5'] === 'Reverse'}
+              class:paddle-switch-normal={switchDemands['5'] === 'Normal'}
+              class:paddle-switch-reverse={switchDemands['5'] === 'Reverse'}
               viewBox="0 0 72 108"
             >
               <path
@@ -729,12 +739,12 @@
           </div>
 
           <div class="detent-legend">
-            <span class="detent-mark" class:active-detent={switchDemands['5'] === 'Normal'}>ON</span>
-            <span class="detent-mark" class:active-detent={switchDemands['5'] === 'Reverse'}>OFF</span>
+            <span class="detent-mark" class:active-detent={switchDemands['5'] === 'Normal'}>LKD</span>
+            <span class="detent-mark" class:active-detent={switchDemands['5'] === 'Reverse'}>UNLKD</span>
           </div>
         </div>
 
-        <!-- Blank Lower Section -->
+        <!-- Blank Lower Section (No Signals at Station 3) -->
         <div class="uss-lever-tier blank-tier">
           <div class="blank-indicator">[ BLANK ]</div>
         </div>
@@ -787,26 +797,28 @@
 
   /* UPPER SECTION: US&S Model Board */
   .model-board-section {
-    flex: 1;
+    height: 230px;
+    flex: none;
     background: #06090f;
     border-bottom: 3px solid #000000;
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
-    padding: 10px 20px;
+    padding: 8px 20px;
   }
 
   .model-board-frame {
     width: 100%;
     max-width: 980px;
+    height: 214px;
     display: flex;
     flex-direction: column;
     align-items: center;
     background: #0a0e18;
     border: 2px solid #1e293b;
     border-radius: 6px;
-    padding: 8px 14px;
+    padding: 6px 14px;
     box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.05), 0 8px 20px rgba(0, 0, 0, 0.7);
   }
 
@@ -834,7 +846,7 @@
 
   .model-board-svg {
     width: 100%;
-    height: 220px;
+    height: 190px;
   }
 
   .track-block {
@@ -845,9 +857,10 @@
     stroke: #38bdf8;
   }
 
-  /* LOWER TIER: Seamless Continuous US&S Style 504 Lever Deck (2-Inch / 144px Centers) */
+  /* LOWER TIER: Seamless Continuous US&S Style 504 Lever Deck (Taller than model board, 2-Inch Centers) */
   .lever-deck-section {
-    height: 400px;
+    height: 520px;
+    flex: none;
     background: #090e17;
     border-top: 2px solid #000000;
     display: flex;
@@ -860,6 +873,7 @@
   /* Single Continuous Sheet Metal Enclosure with NO GAPS between columns */
   .uss-continuous-console {
     display: flex;
+    height: 490px;
     background: linear-gradient(180deg, #1c2638 0%, #0f1726 100%);
     border: 3px solid #334155;
     border-radius: 8px;
@@ -870,9 +884,11 @@
   /* Each Column is EXACTLY 144px wide (2.0 inches at 72 DPI) */
   .uss-column-bay {
     width: 144px;
+    height: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: space-between;
     padding: 10px 0 16px;
     border-right: 1px solid #1e293b;
     position: relative;
@@ -891,7 +907,7 @@
     border: 1px solid #334155;
     border-radius: 4px;
     padding: 3px 14px;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.7);
   }
 
@@ -900,7 +916,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
   }
 
   .blank-tier {
@@ -917,11 +933,39 @@
     letter-spacing: 1px;
   }
 
-  /* Jewel Indicator Row: Left=x:36px (-36 from center), Right=x:108px (+36 from center) */
-  .uss-jewel-strip {
+  /* Switch Lamp Row: 2-hole pattern at x=-36 and x=+36 (2" spacing across adjacent columns) */
+  .uss-switch-lamp-cluster {
     position: relative;
     width: 144px;
-    height: 30px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Signal Lamps in TWO Layers: Upper Center Red STOP, Lower Left Green L & Right Green R */
+  .uss-signal-lamp-cluster {
+    position: relative;
+    width: 144px;
+    height: 48px;
+  }
+
+  .signal-lamp-stop-top {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .signal-lamp-row-bottom {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 144px;
+    height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1028,14 +1072,18 @@
     transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
-  /* Switch Lever: 2 POSITIONS ONLY - Normal UP (0°) ↔ Reverse DOWN (180°) */
-  .uss-large-paddle-svg.paddle-reverse {
-    transform: rotate(180deg);
+  /* Switch Lever: 2 POSITIONS ONLY - Normal 30° LEFT (-30°) ↔ Reverse 30° RIGHT (+30°) - NEVER STRAIGHT UP */
+  .uss-large-paddle-svg.paddle-switch-normal {
+    transform: rotate(-30deg);
   }
 
-  /* Signal Lever: 3 POSITIONS - Left (-45°) ↔ Stop (0°) ↔ Right (+45°) */
+  .uss-large-paddle-svg.paddle-switch-reverse {
+    transform: rotate(30deg);
+  }
+
+  /* Signal Lever: 3 POSITIONS - Left (-30°) ↔ Stop (0°) ↔ Right (+30°) */
   .uss-large-paddle-svg.paddle-signal-left {
-    transform: rotate(-45deg);
+    transform: rotate(-30deg);
   }
 
   .uss-large-paddle-svg.paddle-signal-stop {
@@ -1043,7 +1091,7 @@
   }
 
   .uss-large-paddle-svg.paddle-signal-right {
-    transform: rotate(45deg);
+    transform: rotate(30deg);
   }
 
   .detent-legend {
