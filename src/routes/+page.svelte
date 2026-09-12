@@ -6,6 +6,7 @@
   import SchematicCanvas from '$lib/components/SchematicCanvas.svelte';
   import Inspector from '$lib/components/Inspector.svelte';
   import MatrixPanel from '$lib/components/MatrixPanel.svelte';
+  import CtcConsole from '$lib/components/CtcConsole.svelte';
 
   onMount(() => {
     // Automatically load the CP End-of-Siding demo project at boot
@@ -108,37 +109,8 @@
         <MatrixPanel />
       </div>
     {:else if studio.workspaceMode === 'ctc'}
-      <!-- Virtual cTc Console Preview (Phase 3 Stub) -->
-      <div class="ctc-preview-container">
-        <div class="ctc-faceplate">
-          <div class="ctc-header">US&S STYLE 504 cTc DISPATCHER DESK [PREVIEW]</div>
-          <div class="ctc-status-line">Connected: Simulated In-Memory Plant | Stepper Relays: Idle</div>
-          <div class="ctc-desk-mock">
-            <div class="ctc-model-board">
-              <div class="board-track-line">
-                <span class="lamp lamp-red" title="1T1 Island Shunted">●</span>
-                <span class="track-segment">════════════════════</span>
-                <span class="lamp lamp-green" title="Signal 2R Cleared">●</span>
-                <span class="track-segment">═══════════════</span>
-              </div>
-            </div>
-            <div class="ctc-lever-deck">
-              <div class="lever-column">
-                <div class="lamp lamp-white">●</div>
-                <div class="lever-switch">▲ N</div>
-                <div class="lever-label">SW 1</div>
-                <div class="code-btn">CODE</div>
-              </div>
-              <div class="lever-column">
-                <div class="lamp lamp-green">●</div>
-                <div class="lever-signal">◀ L | STOP | R ▶</div>
-                <div class="lever-label">SIG 2</div>
-                <div class="code-btn">CODE</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <!-- Virtual cTc Machine Console (Problem B & C) -->
+      <CtcConsole />
     {:else if studio.workspaceMode === 'code'}
       <!-- Code & Documentation Export Preview (Phase 4 Stub) -->
       <div class="code-preview-container">
@@ -209,7 +181,6 @@
     padding: 20px;
   }
 
-  .ctc-preview-container,
   .code-preview-container {
     flex: 1;
     display: flex;
@@ -217,112 +188,6 @@
     justify-content: center;
     background: #090d16;
     padding: 40px;
-  }
-
-  .ctc-faceplate {
-    background: #181c24;
-    border: 3px solid #334155;
-    border-radius: 8px;
-    padding: 24px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
-    text-align: center;
-  }
-
-  .ctc-header {
-    font-size: 14px;
-    font-weight: 800;
-    letter-spacing: 1px;
-    color: #f1f5f9;
-  }
-
-  .ctc-status-line {
-    font-size: 11px;
-    color: #64748b;
-    margin: 6px 0 20px;
-  }
-
-  .ctc-desk-mock {
-    display: flex;
-    flex-direction: column;
-    gap: 30px;
-    background: #0b0f19;
-    padding: 24px;
-    border-radius: 6px;
-    border: 1px solid #1e293b;
-  }
-
-  .board-track-line {
-    font-family: monospace;
-    font-size: 16px;
-    color: #cbd5e1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-  }
-
-  .lamp {
-    font-size: 14px;
-  }
-
-  .lamp-red {
-    color: #ef4444;
-    text-shadow: 0 0 8px #ef4444;
-  }
-
-  .lamp-green {
-    color: #22c55e;
-    text-shadow: 0 0 8px #22c55e;
-  }
-
-  .lamp-white {
-    color: #ffffff;
-    text-shadow: 0 0 8px #ffffff;
-  }
-
-  .ctc-lever-deck {
-    display: flex;
-    justify-content: center;
-    gap: 40px;
-  }
-
-  .lever-column {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    background: #131926;
-    padding: 12px 18px;
-    border-radius: 6px;
-    border: 1px solid #1e293b;
-  }
-
-  .lever-switch,
-  .lever-signal {
-    background: #1e293b;
-    padding: 6px 12px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 700;
-    color: #f8fafc;
-    border: 1px solid #475569;
-  }
-
-  .lever-label {
-    font-size: 10px;
-    font-weight: 700;
-    color: #94a3b8;
-  }
-
-  .code-btn {
-    background: linear-gradient(180deg, #94a3b8, #64748b);
-    color: #0f172a;
-    font-weight: 800;
-    font-size: 9px;
-    padding: 4px 8px;
-    border-radius: 50%;
-    border: 2px solid #cbd5e1;
-    cursor: pointer;
   }
 
   .code-box {
