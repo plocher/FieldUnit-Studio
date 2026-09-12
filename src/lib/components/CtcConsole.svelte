@@ -76,14 +76,14 @@
     };
   });
 
-  // Toggle switch lever (US&S 60° detent throw)
+  // Toggle switch lever (US&S 2-position: Normal UP 0° ↔ Reverse DOWN 180°)
   function toggleSwitchLever(swId: string) {
     if (switchDogs[swId] !== 'none') return;
     const next = switchDemands[swId] === 'Normal' ? 'Reverse' : 'Normal';
     switchDemands = { ...switchDemands, [swId]: next };
   }
 
-  // Cycle signal lever (US&S 45° detents: Left -> Stop -> Right -> Stop)
+  // Cycle signal lever (US&S 3-position: Left -45° ↔ Stop 0° ↔ Right +45°)
   function cycleSignalLever(sigId: string) {
     if (signalDogs[sigId] !== 'none') return;
     const current = signalDemands[sigId];
@@ -262,6 +262,11 @@
             <stop offset="85%" stop-color="#d97706" />
             <stop offset="100%" stop-color="#78350f" />
           </radialGradient>
+          <radialGradient id="jewel-amber-dark" cx="35%" cy="35%" r="65%">
+            <stop offset="0%" stop-color="#78350f" />
+            <stop offset="70%" stop-color="#291004" />
+            <stop offset="100%" stop-color="#0c0401" />
+          </radialGradient>
 
           <!-- Faceted Glass Jewel: Green (Permissive) -->
           <radialGradient id="jewel-green-lit" cx="35%" cy="35%" r="65%">
@@ -281,455 +286,467 @@
             <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#000000" flood-opacity="0.8" />
           </filter>
 
-          <!-- Molded Bakelite Paddle Handle Gradient -->
+          <!-- Large Molded Bakelite Paddle Handle Gradient (3x-4x Scale) -->
           <linearGradient id="paddle-plastic" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="#1e293b" />
-            <stop offset="50%" stop-color="#475569" />
+            <stop offset="0%" stop-color="#0f172a" />
+            <stop offset="25%" stop-color="#334155" />
+            <stop offset="50%" stop-color="#64748b" />
+            <stop offset="75%" stop-color="#334155" />
             <stop offset="100%" stop-color="#0f172a" />
           </linearGradient>
 
           <!-- Machined Chrome Center Pivot Hub Gradient -->
           <radialGradient id="hub-chrome" cx="35%" cy="35%" r="65%">
             <stop offset="0%" stop-color="#ffffff" />
-            <stop offset="40%" stop-color="#cbd5e1" />
-            <stop offset="80%" stop-color="#475569" />
+            <stop offset="35%" stop-color="#e2e8f0" />
+            <stop offset="75%" stop-color="#64748b" />
             <stop offset="100%" stop-color="#0f172a" />
+          </radialGradient>
+
+          <!-- Machined Round Code Button Gradient -->
+          <radialGradient id="button-chrome" cx="35%" cy="35%" r="65%">
+            <stop offset="0%" stop-color="#ffffff" />
+            <stop offset="30%" stop-color="#cbd5e1" />
+            <stop offset="70%" stop-color="#64748b" />
+            <stop offset="100%" stop-color="#1e293b" />
           </radialGradient>
         </defs>
 
         <!-- Board Surface Background -->
         <rect width="100%" height="100%" fill="#0a0d14" rx="4" />
 
-        <!-- Vertical Station Column Guidelines -->
+        <!-- Vertical Station Column Guidelines (2-inch / 144px spacing) -->
         <line x1="300" y1="20" x2="300" y2="210" stroke="#1e293b" stroke-width="1.5" stroke-dasharray="4 6" />
-        <line x1="560" y1="20" x2="560" y2="210" stroke="#1e293b" stroke-width="1.5" stroke-dasharray="4 6" />
-        <line x1="740" y1="20" x2="740" y2="210" stroke="#1e293b" stroke-width="1.5" stroke-dasharray="4 6" />
+        <line x1="444" y1="20" x2="444" y2="210" stroke="#1e293b" stroke-width="1.5" stroke-dasharray="4 6" />
+        <line x1="588" y1="20" x2="588" y2="210" stroke="#1e293b" stroke-width="1.5" stroke-dasharray="4 6" />
 
         <!-- Column Alignment Reference Text -->
         <text x="300" y="24" text-anchor="middle" fill="#64748b" font-size="10" font-weight="700" letter-spacing="0.5">LEVER 1 / 4</text>
-        <text x="560" y="24" text-anchor="middle" fill="#64748b" font-size="10" font-weight="700" letter-spacing="0.5">LEVER 3 / 2</text>
-        <text x="740" y="24" text-anchor="middle" fill="#64748b" font-size="10" font-weight="700" letter-spacing="0.5">LEVER 5</text>
+        <text x="444" y="24" text-anchor="middle" fill="#64748b" font-size="10" font-weight="700" letter-spacing="0.5">LEVER 3 / 2</text>
+        <text x="588" y="24" text-anchor="middle" fill="#64748b" font-size="10" font-weight="700" letter-spacing="0.5">LEVER 5</text>
 
         <!-- TRACK LEVEL -1: Industry Lead (Beet Loaders & Derail 5) -->
+        <!-- Double/Triple Thickness Track Lines: 12px width! -->
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <g class="track-block" onclick={() => toggleShunt('5T1')}>
-          <!-- Bold White Track Line (5px width) -->
-          <line x1="420" y1="55" x2="620" y2="55" stroke="#f1f5f9" stroke-width="5" stroke-linecap="round" />
-          <!-- Track Occupancy Red Jewel (Embedded in track line) -->
-          <circle cx="520" cy="55" r="7" fill={trackOccupancy['5T1'] ? 'url(#jewel-red-lit)' : 'url(#jewel-red-dark)'} stroke="#94a3b8" stroke-width="1.5" filter="url(#chrome-glow)" />
-          <text x="520" y="42" text-anchor="middle" fill={trackOccupancy['5T1'] ? '#ef4444' : '#94a3b8'} font-size="9" font-family="monospace" font-weight="700">5T1</text>
+          <line x1="420" y1="55" x2="620" y2="55" stroke="#ffffff" stroke-width="12" stroke-linecap="round" />
+          <!-- Track Occupancy Red Jewel (16px diameter) embedded in track line -->
+          <circle cx="520" cy="55" r="8" fill={trackOccupancy['5T1'] ? 'url(#jewel-red-lit)' : 'url(#jewel-red-dark)'} stroke="#94a3b8" stroke-width="2" filter="url(#chrome-glow)" />
+          <text x="520" y="40" text-anchor="middle" fill={trackOccupancy['5T1'] ? '#ef4444' : '#94a3b8'} font-size="10" font-family="monospace" font-weight="800">5T1</text>
         </g>
 
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <g class="track-block" onclick={() => toggleShunt('IND1')}>
-          <line x1="620" y1="55" x2="840" y2="55" stroke="#f1f5f9" stroke-width="5" stroke-linecap="round" />
+          <line x1="620" y1="55" x2="840" y2="55" stroke="#ffffff" stroke-width="12" stroke-linecap="round" />
           <!-- Red Bumping Post -->
-          <rect x="840" y="45" width="6" height="20" fill="#ef4444" stroke="#ffffff" stroke-width="1.5" rx="1" />
-          <circle cx="730" cy="55" r="7" fill={trackOccupancy['IND1'] ? 'url(#jewel-red-lit)' : 'url(#jewel-red-dark)'} stroke="#94a3b8" stroke-width="1.5" filter="url(#chrome-glow)" />
-          <text x="730" y="42" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="monospace">IND 1</text>
+          <rect x="840" y="43" width="8" height="24" fill="#ef4444" stroke="#ffffff" stroke-width="2" rx="1" />
+          <circle cx="730" cy="55" r="8" fill={trackOccupancy['IND1'] ? 'url(#jewel-red-lit)' : 'url(#jewel-red-dark)'} stroke="#94a3b8" stroke-width="2" filter="url(#chrome-glow)" />
+          <text x="730" y="40" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="monospace" font-weight="700">IND 1</text>
         </g>
 
-        <!-- Derail 5 Stamped ID & Route Indicator -->
-        <text x="400" y="44" fill="#f8fafc" font-size="11" font-weight="900" font-family="sans-serif">5</text>
-        <!-- Derail Block Pipe -->
-        <circle cx="420" cy="55" r="6" fill={switchFieldStatus['5'] === 'Normal' ? '#ef4444' : '#ffffff'} stroke="#000000" stroke-width="1.5" />
+        <!-- Derail 5 Stamped ID & Point Lamp -->
+        <text x="396" y="44" fill="#f8fafc" font-size="13" font-weight="900" font-family="sans-serif">5</text>
+        <circle cx="420" cy="55" r="7" fill={switchFieldStatus['5'] === 'Normal' ? '#ef4444' : '#ffffff'} stroke="#000000" stroke-width="2" />
 
-        <!-- Signal 4NA Mast & Searchlight Head on Level -1 -->
-        <line x1="620" y1="55" x2="620" y2="38" stroke="#cbd5e1" stroke-width="2" />
-        <circle cx="620" cy="38" r="6" fill={signalAspects['4NA'] !== 'Stop' ? 'url(#jewel-green-lit)' : 'url(#jewel-red-lit)'} stroke="#ffffff" stroke-width="1.5" />
-        <text x="634" y="42" fill="#e2e8f0" font-size="9" font-weight="800">4NA</text>
+        <!-- Signal 4NA Searchlight Head on Level -1 -->
+        <line x1="620" y1="55" x2="620" y2="34" stroke="#cbd5e1" stroke-width="2.5" />
+        <circle cx="620" cy="34" r="7" fill={signalAspects['4NA'] !== 'Stop' ? 'url(#jewel-green-lit)' : 'url(#jewel-red-lit)'} stroke="#ffffff" stroke-width="1.5" />
+        <text x="636" y="38" fill="#e2e8f0" font-size="10" font-weight="800">4NA</text>
 
         <!-- TRACK LEVEL 0: Mainline MT2 (Northbound / Eastward) -->
-        <text x="60" y="112" fill="#94a3b8" font-size="10" font-weight="800" letter-spacing="0.5">MAIN 2</text>
+        <text x="40" y="110" fill="#94a3b8" font-size="11" font-weight="900" letter-spacing="0.5">MAIN 2</text>
 
-        <!-- Approach Block 2SAT -->
+        <!-- Approach Block 2SAT (12px bold white line) -->
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <g class="track-block" onclick={() => toggleShunt('2SAT')}>
-          <line x1="120" y1="125" x2="200" y2="125" stroke="#f1f5f9" stroke-width="5" stroke-linecap="round" />
-          <circle cx="160" cy="125" r="7" fill={trackOccupancy['2SAT'] ? 'url(#jewel-red-lit)' : 'url(#jewel-red-dark)'} stroke="#94a3b8" stroke-width="1.5" filter="url(#chrome-glow)" />
-          <text x="160" y="112" text-anchor="middle" fill={trackOccupancy['2SAT'] ? '#ef4444' : '#94a3b8'} font-size="9" font-family="monospace">2SAT</text>
+          <line x1="100" y1="125" x2="200" y2="125" stroke="#ffffff" stroke-width="12" stroke-linecap="round" />
+          <circle cx="150" cy="125" r="8" fill={trackOccupancy['2SAT'] ? 'url(#jewel-red-lit)' : 'url(#jewel-red-dark)'} stroke="#94a3b8" stroke-width="2" filter="url(#chrome-glow)" />
+          <text x="150" y="110" text-anchor="middle" fill={trackOccupancy['2SAT'] ? '#ef4444' : '#94a3b8'} font-size="10" font-family="monospace" font-weight="800">2SAT</text>
         </g>
 
-        <!-- Signal 4SA Mast & Searchlight on MT2 -->
-        <line x1="200" y1="125" x2="200" y2="142" stroke="#cbd5e1" stroke-width="2" />
-        <circle cx="200" cy="142" r="6" fill={signalAspects['4SA'] !== 'Stop' ? 'url(#jewel-green-lit)' : 'url(#jewel-red-lit)'} stroke="#ffffff" stroke-width="1.5" />
-        <text x="200" y="158" text-anchor="middle" fill="#e2e8f0" font-size="9" font-weight="800">4SA</text>
+        <!-- Signal 4SA on MT2 -->
+        <line x1="200" y1="125" x2="200" y2="146" stroke="#cbd5e1" stroke-width="2.5" />
+        <circle cx="200" cy="146" r="7" fill={signalAspects['4SA'] !== 'Stop' ? 'url(#jewel-green-lit)' : 'url(#jewel-red-lit)'} stroke="#ffffff" stroke-width="1.5" />
+        <text x="200" y="164" text-anchor="middle" fill="#e2e8f0" font-size="10" font-weight="800">4SA</text>
 
-        <!-- Island Block 1T1 across Switch 1 -->
+        <!-- Island Block 1T1 across Switch 1 (12px bold line) -->
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <g class="track-block" onclick={() => toggleShunt('1T1')}>
-          <line x1="200" y1="125" x2="300" y2="125" stroke="#f1f5f9" stroke-width="5" />
-          <line x1="300" y1="125" x2="560" y2="125" stroke="#f1f5f9" stroke-width="5" />
+          <line x1="200" y1="125" x2="300" y2="125" stroke="#ffffff" stroke-width="12" />
+          <line x1="300" y1="125" x2="444" y2="125" stroke="#ffffff" stroke-width="12" />
           <!-- Switch 1 Reverse Diverging Crossover Up to Derail 5 -->
-          <line x1="300" y1="125" x2="420" y2="55" stroke="#f1f5f9" stroke-width="5" />
-          <circle cx="250" cy="125" r="7" fill={trackOccupancy['1T1'] ? 'url(#jewel-red-lit)' : 'url(#jewel-red-dark)'} stroke="#94a3b8" stroke-width="1.5" filter="url(#chrome-glow)" />
-          <text x="250" y="112" text-anchor="middle" fill={trackOccupancy['1T1'] ? '#ef4444' : '#94a3b8'} font-size="9" font-family="monospace">1T1</text>
+          <line x1="300" y1="125" x2="420" y2="55" stroke="#ffffff" stroke-width="12" />
+          <circle cx="250" cy="125" r="8" fill={trackOccupancy['1T1'] ? 'url(#jewel-red-lit)' : 'url(#jewel-red-dark)'} stroke="#94a3b8" stroke-width="2" filter="url(#chrome-glow)" />
+          <text x="250" y="110" text-anchor="middle" fill={trackOccupancy['1T1'] ? '#ef4444' : '#94a3b8'} font-size="10" font-family="monospace" font-weight="800">1T1</text>
         </g>
 
-        <!-- Stamped Switch 1 Number & Model Board Point Lamps -->
-        <text x="290" y="112" fill="#f8fafc" font-size="11" font-weight="900" font-family="sans-serif">1</text>
+        <!-- Switch 1 Number & Route Indicator Lamps on Track -->
+        <text x="286" y="110" fill="#f8fafc" font-size="13" font-weight="900" font-family="sans-serif">1</text>
         <!-- Normal Alignment Lamp (lit when SW1 Normal) -->
-        <circle cx="316" cy="125" r="4.5" fill={switchFieldStatus['1'] === 'Normal' ? '#ffffff' : '#1e293b'} stroke="#64748b" stroke-width="1" />
+        <circle cx="320" cy="125" r="5.5" fill={switchFieldStatus['1'] === 'Normal' ? '#ffffff' : '#1e293b'} stroke="#64748b" stroke-width="1.5" />
         <!-- Reverse Alignment Lamp (lit when SW1 Reverse) -->
-        <circle cx="316" cy="115" r="4.5" fill={switchFieldStatus['1'] === 'Reverse' ? '#f59e0b' : '#1e293b'} stroke="#64748b" stroke-width="1" />
+        <circle cx="320" cy="113" r="5.5" fill={switchFieldStatus['1'] === 'Reverse' ? '#f59e0b' : '#1e293b'} stroke="#64748b" stroke-width="1.5" />
 
-        <!-- Island Block 3T1 across Switch 3 -->
+        <!-- Island Block 3T1 across Switch 3 (12px bold line) -->
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <g class="track-block" onclick={() => toggleShunt('3T1')}>
-          <line x1="560" y1="125" x2="720" y2="125" stroke="#f1f5f9" stroke-width="5" />
+          <line x1="444" y1="125" x2="720" y2="125" stroke="#ffffff" stroke-width="12" />
           <!-- Switch 3 Reverse Diagonal Merge Down to MT1 -->
-          <line x1="560" y1="125" x2="450" y2="190" stroke="#f1f5f9" stroke-width="5" />
-          <circle cx="640" cy="125" r="7" fill={trackOccupancy['3T1'] ? 'url(#jewel-red-lit)' : 'url(#jewel-red-dark)'} stroke="#94a3b8" stroke-width="1.5" filter="url(#chrome-glow)" />
-          <text x="640" y="112" text-anchor="middle" fill={trackOccupancy['3T1'] ? '#ef4444' : '#94a3b8'} font-size="9" font-family="monospace">3T1</text>
+          <line x1="444" y1="125" x2="360" y2="190" stroke="#ffffff" stroke-width="12" />
+          <circle cx="640" cy="125" r="8" fill={trackOccupancy['3T1'] ? 'url(#jewel-red-lit)' : 'url(#jewel-red-dark)'} stroke="#94a3b8" stroke-width="2" filter="url(#chrome-glow)" />
+          <text x="640" y="110" text-anchor="middle" fill={trackOccupancy['3T1'] ? '#ef4444' : '#94a3b8'} font-size="10" font-family="monospace" font-weight="800">3T1</text>
         </g>
 
-        <!-- Stamped Switch 3 Number & Model Board Point Lamps -->
-        <text x="572" y="112" fill="#f8fafc" font-size="11" font-weight="900" font-family="sans-serif">3</text>
-        <circle cx="546" cy="125" r="4.5" fill={switchFieldStatus['3'] === 'Normal' ? '#ffffff' : '#1e293b'} stroke="#64748b" stroke-width="1" />
-        <circle cx="546" cy="135" r="4.5" fill={switchFieldStatus['3'] === 'Reverse' ? '#f59e0b' : '#1e293b'} stroke="#64748b" stroke-width="1" />
+        <!-- Switch 3 Number & Route Indicator Lamps on Track -->
+        <text x="456" y="110" fill="#f8fafc" font-size="13" font-weight="900" font-family="sans-serif">3</text>
+        <circle cx="430" cy="125" r="5.5" fill={switchFieldStatus['3'] === 'Normal' ? '#ffffff' : '#1e293b'} stroke="#64748b" stroke-width="1.5" />
+        <circle cx="430" cy="137" r="5.5" fill={switchFieldStatus['3'] === 'Reverse' ? '#f59e0b' : '#1e293b'} stroke="#64748b" stroke-width="1.5" />
 
         <!-- Signal 2NAB on MT2 (Two Searchlight Heads) -->
-        <line x1="720" y1="125" x2="720" y2="95" stroke="#cbd5e1" stroke-width="2" />
-        <circle cx="720" cy="108" r="5.5" fill={signalAspects['2NAB'] === 'Clear' ? 'url(#jewel-green-lit)' : 'url(#jewel-red-lit)'} stroke="#ffffff" stroke-width="1.5" />
-        <circle cx="720" cy="95" r="5.5" fill={signalAspects['2NAB'] === 'Diverging' ? 'url(#jewel-green-lit)' : 'url(#jewel-red-lit)'} stroke="#ffffff" stroke-width="1.5" />
-        <text x="734" y="103" fill="#e2e8f0" font-size="9" font-weight="800">2NAB</text>
+        <line x1="720" y1="125" x2="720" y2="92" stroke="#cbd5e1" stroke-width="2.5" />
+        <circle cx="720" cy="106" r="6" fill={signalAspects['2NAB'] === 'Clear' ? 'url(#jewel-green-lit)' : 'url(#jewel-red-lit)'} stroke="#ffffff" stroke-width="1.5" />
+        <circle cx="720" cy="92" r="6" fill={signalAspects['2NAB'] === 'Diverging' ? 'url(#jewel-green-lit)' : 'url(#jewel-red-lit)'} stroke="#ffffff" stroke-width="1.5" />
+        <text x="736" y="100" fill="#e2e8f0" font-size="10" font-weight="800">2NAB</text>
 
         <!-- Single Track Main Exit 1NAT -->
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <g class="track-block" onclick={() => toggleShunt('1NAT')}>
-          <line x1="720" y1="125" x2="900" y2="125" stroke="#f1f5f9" stroke-width="5" stroke-linecap="round" />
-          <circle cx="810" cy="125" r="7" fill={trackOccupancy['1NAT'] ? 'url(#jewel-red-lit)' : 'url(#jewel-red-dark)'} stroke="#94a3b8" stroke-width="1.5" filter="url(#chrome-glow)" />
-          <text x="810" y="112" text-anchor="middle" fill={trackOccupancy['1NAT'] ? '#ef4444' : '#94a3b8'} font-size="9" font-family="monospace">1NAT</text>
+          <line x1="720" y1="125" x2="900" y2="125" stroke="#ffffff" stroke-width="12" stroke-linecap="round" />
+          <circle cx="810" cy="125" r="8" fill={trackOccupancy['1NAT'] ? 'url(#jewel-red-lit)' : 'url(#jewel-red-dark)'} stroke="#94a3b8" stroke-width="2" filter="url(#chrome-glow)" />
+          <text x="810" y="110" text-anchor="middle" fill={trackOccupancy['1NAT'] ? '#ef4444' : '#94a3b8'} font-size="10" font-family="monospace" font-weight="800">1NAT</text>
         </g>
 
         <!-- TRACK LEVEL 1: Mainline MT1 (Southbound / Westward) -->
-        <text x="60" y="178" fill="#94a3b8" font-size="10" font-weight="800" letter-spacing="0.5">MAIN 1</text>
+        <text x="40" y="176" fill="#94a3b8" font-size="11" font-weight="900" letter-spacing="0.5">MAIN 1</text>
 
-        <!-- Approach Block 1SAT -->
+        <!-- Approach Block 1SAT (12px bold white line) -->
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <g class="track-block" onclick={() => toggleShunt('1SAT')}>
-          <line x1="120" y1="190" x2="200" y2="190" stroke="#f1f5f9" stroke-width="5" stroke-linecap="round" />
-          <line x1="200" y1="190" x2="450" y2="190" stroke="#f1f5f9" stroke-width="5" />
-          <circle cx="160" cy="190" r="7" fill={trackOccupancy['1SAT'] ? 'url(#jewel-red-lit)' : 'url(#jewel-red-dark)'} stroke="#94a3b8" stroke-width="1.5" filter="url(#chrome-glow)" />
-          <text x="160" y="178" text-anchor="middle" fill={trackOccupancy['1SAT'] ? '#ef4444' : '#94a3b8'} font-size="9" font-family="monospace">1SAT</text>
+          <line x1="100" y1="190" x2="200" y2="190" stroke="#ffffff" stroke-width="12" stroke-linecap="round" />
+          <line x1="200" y1="190" x2="360" y2="190" stroke="#ffffff" stroke-width="12" />
+          <circle cx="150" cy="190" r="8" fill={trackOccupancy['1SAT'] ? 'url(#jewel-red-lit)' : 'url(#jewel-red-dark)'} stroke="#94a3b8" stroke-width="2" filter="url(#chrome-glow)" />
+          <text x="150" y="176" text-anchor="middle" fill={trackOccupancy['1SAT'] ? '#ef4444' : '#94a3b8'} font-size="10" font-family="monospace" font-weight="800">1SAT</text>
         </g>
 
         <!-- Signal 2SA Dwarf Searchlight on MT1 -->
-        <line x1="200" y1="190" x2="200" y2="205" stroke="#cbd5e1" stroke-width="2" />
-        <circle cx="200" cy="205" r="6" fill={signalAspects['2SA'] !== 'Stop' ? 'url(#jewel-green-lit)' : 'url(#jewel-red-lit)'} stroke="#ffffff" stroke-width="1.5" />
-        <text x="214" y="210" fill="#e2e8f0" font-size="9" font-weight="800">2SA</text>
+        <line x1="200" y1="190" x2="200" y2="206" stroke="#cbd5e1" stroke-width="2.5" />
+        <circle cx="200" cy="206" r="6" fill={signalAspects['2SA'] !== 'Stop' ? 'url(#jewel-green-lit)' : 'url(#jewel-red-lit)'} stroke="#ffffff" stroke-width="1.5" />
+        <text x="216" y="210" fill="#e2e8f0" font-size="10" font-weight="800">2SA</text>
       </svg>
     </div>
   </div>
 
-  <!-- LOWER SECTION: The US&S Style 504 Modular Vertical Station Lever Deck -->
+  <!-- LOWER SECTION: Seamless Continuous US&S Style 504 Lever Deck (2-Inch Centers, No Gaps) -->
   <div class="lever-deck-section">
-    <!-- STATION COLUMN 1 (Switch 1 & Signal 4) -->
-    <div class="uss-column-plate">
-      <!-- Cast Aluminum Station Nameplate Header -->
-      <div class="uss-column-header">STATION 1</div>
+    <div class="uss-continuous-console">
+      <!-- STATION COLUMN 1 (Switch 1 & Signal 4) - Exactly 144px wide (2.0 inches) -->
+      <div class="uss-column-bay">
+        <div class="uss-column-tag">STATION 1</div>
 
-      <!-- US&S Switch 1 Unit Faceplate -->
-      <div class="uss-escutcheon-unit">
-        <!-- Switch Jewel Indications: Left=N (White/Opal), Right=R (Amber) -->
-        <div class="uss-jewel-header">
-          <div class="jewel-cell">
-            <span class="uss-jewel-lamp jewel-opal" class:lit={switchFieldStatus['1'] === 'Normal'}></span>
-            <span class="jewel-caption">N</span>
+        <!-- Switch 1 Unit (Lamps at x=36 and x=108, exactly 2" centers from adjacent columns) -->
+        <div class="uss-lever-tier">
+          <div class="uss-jewel-strip">
+            <div class="jewel-mount left-mount" title="Normal Correspondence (1NWK)">
+              <span class="uss-jewel-lens jewel-opal" class:lit={switchFieldStatus['1'] === 'Normal'}></span>
+              <span class="jewel-letter">N</span>
+            </div>
+            <span class="lever-number-stamp">1</span>
+            <div class="jewel-mount right-mount" title="Reverse Correspondence (1RWK)">
+              <span class="uss-jewel-lens jewel-amber" class:lit={switchFieldStatus['1'] === 'Reverse'}></span>
+              <span class="jewel-letter">R</span>
+            </div>
           </div>
-          <span class="uss-appliance-number">1</span>
-          <div class="jewel-cell">
-            <span class="uss-jewel-lamp jewel-amber" class:lit={switchFieldStatus['1'] === 'Reverse'}></span>
-            <span class="jewel-caption">R</span>
-          </div>
-        </div>
 
-        <!-- US&S Molded Black Teardrop Paddle Lever with Chrome Pivot Hub -->
-        <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div
-          class="uss-lever-bracket"
-          onclick={() => toggleSwitchLever('1')}
-          oncontextmenu={(e) => cycleDog('switch', '1', e)}
-          title="Click lever to throw (Normal ↔ Reverse) | Right-click to dog"
-        >
-          <!-- SVG Vector-Drawn US&S Teardrop Paddle Handle -->
-          <svg
-            class="uss-paddle-lever-svg"
-            class:lever-reverse={switchDemands['1'] === 'Reverse'}
-            viewBox="0 0 60 76"
+          <!-- US&S 2-Position Switch Teardrop Paddle (UP Normal 0° ↔ DOWN Reverse 180° - NEVER CENTERED) -->
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div
+            class="uss-lever-pivot-box"
+            onclick={() => toggleSwitchLever('1')}
+            oncontextmenu={(e) => cycleDog('switch', '1', e)}
+            title="Click lever to throw (Normal UP ↔ Reverse DOWN) | Right-click to dog"
           >
-            <!-- Molded Teardrop Paddle Blade Body (Pivots at x=30, y=52) -->
-            <path
-              d="M22,52 C20,40 22,22 26,10 C28,5 32,5 34,10 C38,22 40,40 38,52 C36,58 24,58 22,52 Z"
-              fill="url(#paddle-plastic)"
-              stroke="#0f172a"
-              stroke-width="1.5"
-            />
-            <!-- Raised Grip Serrations / Ridge -->
-            <line x1="30" y1="8" x2="30" y2="44" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.9" />
-            <!-- Heavy Center Pivot Hub with Machined Retaining Ring -->
-            <circle cx="30" cy="52" r="14" fill="url(#hub-chrome)" stroke="#090d16" stroke-width="1.5" />
-            <circle cx="30" cy="52" r="5" fill="#1e293b" />
-          </svg>
+            <!-- 3x-4x Scale Authentic Molded Teardrop Paddle (96px tall, 36px wide) -->
+            <svg
+              class="uss-large-paddle-svg"
+              class:paddle-reverse={switchDemands['1'] === 'Reverse'}
+              viewBox="0 0 72 108"
+            >
+              <!-- Teardrop Paddle Body (Pivots at x=36, y=72) -->
+              <path
+                d="M24,72 C20,52 22,26 28,8 C32,2 40,2 44,8 C50,26 52,52 48,72 C44,82 28,82 24,72 Z"
+                fill="url(#paddle-plastic)"
+                stroke="#0f172a"
+                stroke-width="2"
+              />
+              <!-- Molded Pointer Blade Stripe -->
+              <line x1="36" y1="6" x2="36" y2="60" stroke="#f8fafc" stroke-width="3" stroke-linecap="round" />
+              <!-- Machined Center Pivot Hub with Hex / Round Boss -->
+              <circle cx="36" cy="72" r="20" fill="url(#hub-chrome)" stroke="#090d16" stroke-width="2" />
+              <circle cx="36" cy="72" r="8" fill="#1e293b" />
+            </svg>
 
-          <!-- Mechanical Dog Collar -->
-          {#if switchDogs['1'] !== 'none'}
-            <div class="uss-dog-collar dog-{switchDogs['1']}">DOG</div>
-          {/if}
-        </div>
-
-        <!-- Embossed Detent Labels below Hub -->
-        <div class="uss-detent-scale">
-          <span class="scale-detent" class:active-detent={switchDemands['1'] === 'Normal'}>N</span>
-          <span class="scale-detent" class:active-detent={switchDemands['1'] === 'Reverse'}>R</span>
-        </div>
-      </div>
-
-      <!-- US&S Signal 4 Unit Faceplate -->
-      <div class="uss-escutcheon-unit">
-        <!-- Signal Jewel Indications: Left=L (Green), Center=STOP (Red), Right=R (Green) -->
-        <div class="uss-jewel-header three-jewels">
-          <div class="jewel-cell">
-            <span class="uss-jewel-lamp jewel-green" class:lit={signalAspects['4NA'] !== 'Stop'}></span>
-            <span class="jewel-caption">L</span>
+            {#if switchDogs['1'] !== 'none'}
+              <div class="uss-dog-badge dog-{switchDogs['1']}">DOG</div>
+            {/if}
           </div>
-          <div class="jewel-cell">
-            <span class="uss-jewel-lamp jewel-red" class:lit={signalAspects['4NA'] === 'Stop' && signalAspects['4SA'] === 'Stop'}></span>
-            <span class="jewel-caption">STOP</span>
-          </div>
-          <div class="jewel-cell">
-            <span class="uss-jewel-lamp jewel-green" class:lit={signalAspects['4SA'] !== 'Stop'}></span>
-            <span class="jewel-caption">R</span>
+
+          <div class="detent-legend">
+            <span class="detent-mark" class:active-detent={switchDemands['1'] === 'Normal'}>N</span>
+            <span class="detent-mark" class:active-detent={switchDemands['1'] === 'Reverse'}>R</span>
           </div>
         </div>
 
-        <!-- US&S 3-Position Signal Paddle Lever (-45° Left, 0° Stop, +45° Right) -->
-        <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div
-          class="uss-lever-bracket"
-          onclick={() => cycleSignalLever('4')}
-          oncontextmenu={(e) => cycleDog('signal', '4', e)}
-          title="Click lever to throw (Left ↔ Stop ↔ Right) | Right-click to dog"
-        >
-          <svg
-            class="uss-paddle-lever-svg lever-signal-{signalDemands['4'].toLowerCase()}"
-            viewBox="0 0 60 76"
+        <!-- Signal 4 Unit (3 Lamps on 2" Centers) -->
+        <div class="uss-lever-tier">
+          <div class="uss-jewel-strip three-jewels">
+            <div class="jewel-mount left-mount" title="Left Permissive (4NA)">
+              <span class="uss-jewel-lens jewel-green" class:lit={signalAspects['4NA'] !== 'Stop'}></span>
+              <span class="jewel-letter">L</span>
+            </div>
+            <div class="jewel-mount center-mount" title="Stop Indication">
+              <span class="uss-jewel-lens jewel-red" class:lit={signalAspects['4NA'] === 'Stop' && signalAspects['4SA'] === 'Stop'}></span>
+              <span class="jewel-letter">STOP</span>
+            </div>
+            <div class="jewel-mount right-mount" title="Right Permissive (4SA)">
+              <span class="uss-jewel-lens jewel-green" class:lit={signalAspects['4SA'] !== 'Stop'}></span>
+              <span class="jewel-letter">R</span>
+            </div>
+          </div>
+
+          <!-- US&S 3-Position Signal Paddle Lever (-45° Left ↔ 0° Stop ↔ +45° Right) -->
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div
+            class="uss-lever-pivot-box"
+            onclick={() => cycleSignalLever('4')}
+            oncontextmenu={(e) => cycleDog('signal', '4', e)}
+            title="Click lever to throw (Left ↔ Stop ↔ Right) | Right-click to dog"
           >
-            <path
-              d="M22,52 C20,40 22,22 26,10 C28,5 32,5 34,10 C38,22 40,40 38,52 C36,58 24,58 22,52 Z"
-              fill="url(#paddle-plastic)"
-              stroke="#0f172a"
-              stroke-width="1.5"
-            />
-            <line x1="30" y1="8" x2="30" y2="44" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.9" />
-            <circle cx="30" cy="52" r="14" fill="url(#hub-chrome)" stroke="#090d16" stroke-width="1.5" />
-            <circle cx="30" cy="52" r="5" fill="#1e293b" />
-          </svg>
+            <svg
+              class="uss-large-paddle-svg paddle-signal-{signalDemands['4'].toLowerCase()}"
+              viewBox="0 0 72 108"
+            >
+              <path
+                d="M24,72 C20,52 22,26 28,8 C32,2 40,2 44,8 C50,26 52,52 48,72 C44,82 28,82 24,72 Z"
+                fill="url(#paddle-plastic)"
+                stroke="#0f172a"
+                stroke-width="2"
+              />
+              <line x1="36" y1="6" x2="36" y2="60" stroke="#f8fafc" stroke-width="3" stroke-linecap="round" />
+              <circle cx="36" cy="72" r="20" fill="url(#hub-chrome)" stroke="#090d16" stroke-width="2" />
+              <circle cx="36" cy="72" r="8" fill="#1e293b" />
+            </svg>
 
-          {#if signalDogs['4'] !== 'none'}
-            <div class="uss-dog-collar dog-{signalDogs['4']}">DOG</div>
-          {/if}
+            {#if signalDogs['4'] !== 'none'}
+              <div class="uss-dog-badge dog-{signalDogs['4']}">DOG</div>
+            {/if}
+          </div>
+
+          <div class="detent-legend three-marks">
+            <span class="detent-mark" class:active-detent={signalDemands['4'] === 'Left'}>L</span>
+            <span class="detent-mark" class:active-detent={signalDemands['4'] === 'Stop'}>STOP</span>
+            <span class="detent-mark" class:active-detent={signalDemands['4'] === 'Right'}>R</span>
+          </div>
         </div>
 
-        <div class="uss-detent-scale three-detents">
-          <span class="scale-detent" class:active-detent={signalDemands['4'] === 'Left'}>L</span>
-          <span class="scale-detent" class:active-detent={signalDemands['4'] === 'Stop'}>STOP</span>
-          <span class="scale-detent" class:active-detent={signalDemands['4'] === 'Right'}>R</span>
-        </div>
+        <!-- Authentic Perfectly Round Machined US&S Code Button -->
+        <button class="uss-round-code-button" onclick={() => punchCodeButton(1)} title="Punch to transmit atomic snapshot">
+          <div class="round-button-outer-rim">
+            <div class="round-button-piston">
+              <span class="button-piston-text">1</span>
+            </div>
+          </div>
+        </button>
       </div>
 
-      <!-- Machined Metal Code Button Head -->
-      <button class="uss-code-button-assembly" onclick={() => punchCodeButton(1)} title="Punch to transmit Interface A code line snapshot">
-        <div class="code-button-rim">
-          <div class="code-button-piston">CODE 1</div>
-        </div>
-      </button>
-    </div>
+      <!-- STATION COLUMN 2 (Switch 3 & Signal 2) - Exactly 144px wide (2.0 inches) -->
+      <div class="uss-column-bay">
+        <div class="uss-column-tag">STATION 2</div>
 
-    <!-- STATION COLUMN 2 (Switch 3 & Signal 2) -->
-    <div class="uss-column-plate">
-      <div class="uss-column-header">STATION 2</div>
-
-      <!-- US&S Switch 3 Unit Faceplate -->
-      <div class="uss-escutcheon-unit">
-        <div class="uss-jewel-header">
-          <div class="jewel-cell">
-            <span class="uss-jewel-lamp jewel-opal" class:lit={switchFieldStatus['3'] === 'Normal'}></span>
-            <span class="jewel-caption">N</span>
+        <!-- Switch 3 Unit -->
+        <div class="uss-lever-tier">
+          <div class="uss-jewel-strip">
+            <div class="jewel-mount left-mount" title="Normal Correspondence (3NWK)">
+              <span class="uss-jewel-lens jewel-opal" class:lit={switchFieldStatus['3'] === 'Normal'}></span>
+              <span class="jewel-letter">N</span>
+            </div>
+            <span class="lever-number-stamp">3</span>
+            <div class="jewel-mount right-mount" title="Reverse Correspondence (3RWK)">
+              <span class="uss-jewel-lens jewel-amber" class:lit={switchFieldStatus['3'] === 'Reverse'}></span>
+              <span class="jewel-letter">R</span>
+            </div>
           </div>
-          <span class="uss-appliance-number">3</span>
-          <div class="jewel-cell">
-            <span class="uss-jewel-lamp jewel-amber" class:lit={switchFieldStatus['3'] === 'Reverse'}></span>
-            <span class="jewel-caption">R</span>
-          </div>
-        </div>
 
-        <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div
-          class="uss-lever-bracket"
-          onclick={() => toggleSwitchLever('3')}
-          oncontextmenu={(e) => cycleDog('switch', '3', e)}
-          title="Click lever to throw (Normal ↔ Reverse) | Right-click to dog"
-        >
-          <svg
-            class="uss-paddle-lever-svg"
-            class:lever-reverse={switchDemands['3'] === 'Reverse'}
-            viewBox="0 0 60 76"
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div
+            class="uss-lever-pivot-box"
+            onclick={() => toggleSwitchLever('3')}
+            oncontextmenu={(e) => cycleDog('switch', '3', e)}
+            title="Click lever to throw (Normal UP ↔ Reverse DOWN) | Right-click to dog"
           >
-            <path
-              d="M22,52 C20,40 22,22 26,10 C28,5 32,5 34,10 C38,22 40,40 38,52 C36,58 24,58 22,52 Z"
-              fill="url(#paddle-plastic)"
-              stroke="#0f172a"
-              stroke-width="1.5"
-            />
-            <line x1="30" y1="8" x2="30" y2="44" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.9" />
-            <circle cx="30" cy="52" r="14" fill="url(#hub-chrome)" stroke="#090d16" stroke-width="1.5" />
-            <circle cx="30" cy="52" r="5" fill="#1e293b" />
-          </svg>
+            <svg
+              class="uss-large-paddle-svg"
+              class:paddle-reverse={switchDemands['3'] === 'Reverse'}
+              viewBox="0 0 72 108"
+            >
+              <path
+                d="M24,72 C20,52 22,26 28,8 C32,2 40,2 44,8 C50,26 52,52 48,72 C44,82 28,82 24,72 Z"
+                fill="url(#paddle-plastic)"
+                stroke="#0f172a"
+                stroke-width="2"
+              />
+              <line x1="36" y1="6" x2="36" y2="60" stroke="#f8fafc" stroke-width="3" stroke-linecap="round" />
+              <circle cx="36" cy="72" r="20" fill="url(#hub-chrome)" stroke="#090d16" stroke-width="2" />
+              <circle cx="36" cy="72" r="8" fill="#1e293b" />
+            </svg>
 
-          {#if switchDogs['3'] !== 'none'}
-            <div class="uss-dog-collar dog-{switchDogs['3']}">DOG</div>
-          {/if}
-        </div>
-
-        <div class="uss-detent-scale">
-          <span class="scale-detent" class:active-detent={switchDemands['3'] === 'Normal'}>N</span>
-          <span class="scale-detent" class:active-detent={switchDemands['3'] === 'Reverse'}>R</span>
-        </div>
-      </div>
-
-      <!-- US&S Signal 2 Unit Faceplate -->
-      <div class="uss-escutcheon-unit">
-        <div class="uss-jewel-header three-jewels">
-          <div class="jewel-cell">
-            <span class="uss-jewel-lamp jewel-green" class:lit={signalAspects['2NAB'] !== 'Stop'}></span>
-            <span class="jewel-caption">L</span>
+            {#if switchDogs['3'] !== 'none'}
+              <div class="uss-dog-badge dog-{switchDogs['3']}">DOG</div>
+            {/if}
           </div>
-          <div class="jewel-cell">
-            <span class="uss-jewel-lamp jewel-red" class:lit={signalAspects['2NAB'] === 'Stop' && signalAspects['2SA'] === 'Stop'}></span>
-            <span class="jewel-caption">STOP</span>
-          </div>
-          <div class="jewel-cell">
-            <span class="uss-jewel-lamp jewel-green" class:lit={signalAspects['2SA'] !== 'Stop'}></span>
-            <span class="jewel-caption">R</span>
+
+          <div class="detent-legend">
+            <span class="detent-mark" class:active-detent={switchDemands['3'] === 'Normal'}>N</span>
+            <span class="detent-mark" class:active-detent={switchDemands['3'] === 'Reverse'}>R</span>
           </div>
         </div>
 
-        <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div
-          class="uss-lever-bracket"
-          onclick={() => cycleSignalLever('2')}
-          oncontextmenu={(e) => cycleDog('signal', '2', e)}
-          title="Click lever to throw (Left ↔ Stop ↔ Right) | Right-click to dog"
-        >
-          <svg
-            class="uss-paddle-lever-svg lever-signal-{signalDemands['2'].toLowerCase()}"
-            viewBox="0 0 60 76"
+        <!-- Signal 2 Unit -->
+        <div class="uss-lever-tier">
+          <div class="uss-jewel-strip three-jewels">
+            <div class="jewel-mount left-mount" title="Left Permissive (2NAB)">
+              <span class="uss-jewel-lens jewel-green" class:lit={signalAspects['2NAB'] !== 'Stop'}></span>
+              <span class="jewel-letter">L</span>
+            </div>
+            <div class="jewel-mount center-mount" title="Stop Indication">
+              <span class="uss-jewel-lens jewel-red" class:lit={signalAspects['2NAB'] === 'Stop' && signalAspects['2SA'] === 'Stop'}></span>
+              <span class="jewel-letter">STOP</span>
+            </div>
+            <div class="jewel-mount right-mount" title="Right Permissive (2SA)">
+              <span class="uss-jewel-lens jewel-green" class:lit={signalAspects['2SA'] !== 'Stop'}></span>
+              <span class="jewel-letter">R</span>
+            </div>
+          </div>
+
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div
+            class="uss-lever-pivot-box"
+            onclick={() => cycleSignalLever('2')}
+            oncontextmenu={(e) => cycleDog('signal', '2', e)}
+            title="Click lever to throw (Left ↔ Stop ↔ Right) | Right-click to dog"
           >
-            <path
-              d="M22,52 C20,40 22,22 26,10 C28,5 32,5 34,10 C38,22 40,40 38,52 C36,58 24,58 22,52 Z"
-              fill="url(#paddle-plastic)"
-              stroke="#0f172a"
-              stroke-width="1.5"
-            />
-            <line x1="30" y1="8" x2="30" y2="44" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.9" />
-            <circle cx="30" cy="52" r="14" fill="url(#hub-chrome)" stroke="#090d16" stroke-width="1.5" />
-            <circle cx="30" cy="52" r="5" fill="#1e293b" />
-          </svg>
+            <svg
+              class="uss-large-paddle-svg paddle-signal-{signalDemands['2'].toLowerCase()}"
+              viewBox="0 0 72 108"
+            >
+              <path
+                d="M24,72 C20,52 22,26 28,8 C32,2 40,2 44,8 C50,26 52,52 48,72 C44,82 28,82 24,72 Z"
+                fill="url(#paddle-plastic)"
+                stroke="#0f172a"
+                stroke-width="2"
+              />
+              <line x1="36" y1="6" x2="36" y2="60" stroke="#f8fafc" stroke-width="3" stroke-linecap="round" />
+              <circle cx="36" cy="72" r="20" fill="url(#hub-chrome)" stroke="#090d16" stroke-width="2" />
+              <circle cx="36" cy="72" r="8" fill="#1e293b" />
+            </svg>
 
-          {#if signalDogs['2'] !== 'none'}
-            <div class="uss-dog-collar dog-{signalDogs['2']}">DOG</div>
-          {/if}
+            {#if signalDogs['2'] !== 'none'}
+              <div class="uss-dog-badge dog-{signalDogs['2']}">DOG</div>
+            {/if}
+          </div>
+
+          <div class="detent-legend three-marks">
+            <span class="detent-mark" class:active-detent={signalDemands['2'] === 'Left'}>L</span>
+            <span class="detent-mark" class:active-detent={signalDemands['2'] === 'Stop'}>STOP</span>
+            <span class="detent-mark" class:active-detent={signalDemands['2'] === 'Right'}>R</span>
+          </div>
         </div>
 
-        <div class="uss-detent-scale three-detents">
-          <span class="scale-detent" class:active-detent={signalDemands['2'] === 'Left'}>L</span>
-          <span class="scale-detent" class:active-detent={signalDemands['2'] === 'Stop'}>STOP</span>
-          <span class="scale-detent" class:active-detent={signalDemands['2'] === 'Right'}>R</span>
-        </div>
+        <button class="uss-round-code-button" onclick={() => punchCodeButton(2)} title="Punch to transmit atomic snapshot">
+          <div class="round-button-outer-rim">
+            <div class="round-button-piston">
+              <span class="button-piston-text">2</span>
+            </div>
+          </div>
+        </button>
       </div>
 
-      <button class="uss-code-button-assembly" onclick={() => punchCodeButton(2)} title="Punch to transmit Interface A code line snapshot">
-        <div class="code-button-rim">
-          <div class="code-button-piston">CODE 2</div>
-        </div>
-      </button>
-    </div>
+      <!-- STATION COLUMN 3 (Derail 5) - Exactly 144px wide (2.0 inches) -->
+      <div class="uss-column-bay">
+        <div class="uss-column-tag">STATION 3</div>
 
-    <!-- STATION COLUMN 3 (Derail 5) -->
-    <div class="uss-column-plate">
-      <div class="uss-column-header">STATION 3</div>
-
-      <!-- US&S Switch 5 (Derail) Unit Faceplate -->
-      <div class="uss-escutcheon-unit">
-        <div class="uss-jewel-header">
-          <div class="jewel-cell">
-            <span class="uss-jewel-lamp jewel-red" class:lit={switchFieldStatus['5'] === 'Normal'}></span>
-            <span class="jewel-caption">ON</span>
+        <!-- Switch 5 (Derail) Unit -->
+        <div class="uss-lever-tier">
+          <div class="uss-jewel-strip">
+            <div class="jewel-mount left-mount" title="Derail On (5NWK)">
+              <span class="uss-jewel-lens jewel-red" class:lit={switchFieldStatus['5'] === 'Normal'}></span>
+              <span class="jewel-letter">ON</span>
+            </div>
+            <span class="lever-number-stamp">5</span>
+            <div class="jewel-mount right-mount" title="Derail Off (5RWK)">
+              <span class="uss-jewel-lens jewel-opal" class:lit={switchFieldStatus['5'] === 'Reverse'}></span>
+              <span class="jewel-letter">OFF</span>
+            </div>
           </div>
-          <span class="uss-appliance-number">5</span>
-          <div class="jewel-cell">
-            <span class="uss-jewel-lamp jewel-opal" class:lit={switchFieldStatus['5'] === 'Reverse'}></span>
-            <span class="jewel-caption">OFF</span>
-          </div>
-        </div>
 
-        <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div
-          class="uss-lever-bracket"
-          onclick={() => toggleSwitchLever('5')}
-          oncontextmenu={(e) => cycleDog('switch', '5', e)}
-          title="Normal = Derail On | Reverse = Derail Clear"
-        >
-          <svg
-            class="uss-paddle-lever-svg"
-            class:lever-reverse={switchDemands['5'] === 'Reverse'}
-            viewBox="0 0 60 76"
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div
+            class="uss-lever-pivot-box"
+            onclick={() => toggleSwitchLever('5')}
+            oncontextmenu={(e) => cycleDog('switch', '5', e)}
+            title="Normal UP = Derail On | Reverse DOWN = Derail Clear"
           >
-            <path
-              d="M22,52 C20,40 22,22 26,10 C28,5 32,5 34,10 C38,22 40,40 38,52 C36,58 24,58 22,52 Z"
-              fill="url(#paddle-plastic)"
-              stroke="#0f172a"
-              stroke-width="1.5"
-            />
-            <line x1="30" y1="8" x2="30" y2="44" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.9" />
-            <circle cx="30" cy="52" r="14" fill="url(#hub-chrome)" stroke="#090d16" stroke-width="1.5" />
-            <circle cx="30" cy="52" r="5" fill="#1e293b" />
-          </svg>
+            <svg
+              class="uss-large-paddle-svg"
+              class:paddle-reverse={switchDemands['5'] === 'Reverse'}
+              viewBox="0 0 72 108"
+            >
+              <path
+                d="M24,72 C20,52 22,26 28,8 C32,2 40,2 44,8 C50,26 52,52 48,72 C44,82 28,82 24,72 Z"
+                fill="url(#paddle-plastic)"
+                stroke="#0f172a"
+                stroke-width="2"
+              />
+              <line x1="36" y1="6" x2="36" y2="60" stroke="#f8fafc" stroke-width="3" stroke-linecap="round" />
+              <circle cx="36" cy="72" r="20" fill="url(#hub-chrome)" stroke="#090d16" stroke-width="2" />
+              <circle cx="36" cy="72" r="8" fill="#1e293b" />
+            </svg>
 
-          {#if switchDogs['5'] !== 'none'}
-            <div class="uss-dog-collar dog-{switchDogs['5']}">DOG</div>
-          {/if}
+            {#if switchDogs['5'] !== 'none'}
+              <div class="uss-dog-badge dog-{switchDogs['5']}">DOG</div>
+            {/if}
+          </div>
+
+          <div class="detent-legend">
+            <span class="detent-mark" class:active-detent={switchDemands['5'] === 'Normal'}>ON</span>
+            <span class="detent-mark" class:active-detent={switchDemands['5'] === 'Reverse'}>OFF</span>
+          </div>
         </div>
 
-        <div class="uss-detent-scale">
-          <span class="scale-detent" class:active-detent={switchDemands['5'] === 'Normal'}>ON</span>
-          <span class="scale-detent" class:active-detent={switchDemands['5'] === 'Reverse'}>OFF</span>
+        <!-- Blank Lower Section -->
+        <div class="uss-lever-tier blank-tier">
+          <div class="blank-indicator">[ BLANK ]</div>
         </div>
+
+        <button class="uss-round-code-button" onclick={() => punchCodeButton(3)} title="Punch to transmit atomic snapshot">
+          <div class="round-button-outer-rim">
+            <div class="round-button-piston">
+              <span class="button-piston-text">3</span>
+            </div>
+          </div>
+        </button>
       </div>
-
-      <!-- Blank Lower Plate for Station 3 -->
-      <div class="uss-escutcheon-unit blank-escutcheon">
-        <div class="blank-escutcheon-label">[ BLANK ]</div>
-      </div>
-
-      <button class="uss-code-button-assembly" onclick={() => punchCodeButton(3)} title="Punch to transmit Interface A code line snapshot">
-        <div class="code-button-rim">
-          <div class="code-button-piston">CODE 3</div>
-        </div>
-      </button>
     </div>
   </div>
 </div>
@@ -777,7 +794,7 @@
     align-items: center;
     justify-content: center;
     position: relative;
-    padding: 12px 20px;
+    padding: 10px 20px;
   }
 
   .model-board-frame {
@@ -789,7 +806,7 @@
     background: #0a0e18;
     border: 2px solid #1e293b;
     border-radius: 6px;
-    padding: 10px 14px;
+    padding: 8px 14px;
     box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.05), 0 8px 20px rgba(0, 0, 0, 0.7);
   }
 
@@ -797,11 +814,11 @@
     display: flex;
     align-items: baseline;
     gap: 16px;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
   }
 
   .station-callout {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 900;
     letter-spacing: 1.5px;
     color: #f8fafc;
@@ -828,83 +845,114 @@
     stroke: #38bdf8;
   }
 
-  /* LOWER TIER: Authentic US&S Modular 2-Inch Vertical Station Lever Deck */
+  /* LOWER TIER: Seamless Continuous US&S Style 504 Lever Deck (2-Inch / 144px Centers) */
   .lever-deck-section {
-    height: 380px;
-    background: #0d131f;
+    height: 400px;
+    background: #090e17;
     border-top: 2px solid #000000;
     display: flex;
     justify-content: center;
-    gap: 32px;
-    padding: 16px 20px 20px;
-    box-shadow: inset 0 8px 16px rgba(0, 0, 0, 0.6);
+    align-items: center;
+    padding: 10px 0 16px;
+    box-shadow: inset 0 8px 16px rgba(0, 0, 0, 0.8);
   }
 
-  /* Modular Cast Aluminum Column Plate */
-  .uss-column-plate {
-    width: 190px;
-    background: linear-gradient(180deg, #182234 0%, #101726 100%);
+  /* Single Continuous Sheet Metal Enclosure with NO GAPS between columns */
+  .uss-continuous-console {
+    display: flex;
+    background: linear-gradient(180deg, #1c2638 0%, #0f1726 100%);
     border: 3px solid #334155;
     border-radius: 8px;
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.8), inset 0 1px 2px rgba(255, 255, 255, 0.15);
+    overflow: hidden;
+  }
+
+  /* Each Column is EXACTLY 144px wide (2.0 inches at 72 DPI) */
+  .uss-column-bay {
+    width: 144px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 10px 12px 14px;
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.6), inset 0 1px 2px rgba(255, 255, 255, 0.12);
+    padding: 10px 0 16px;
+    border-right: 1px solid #1e293b;
+    position: relative;
   }
 
-  .uss-column-header {
+  .uss-column-bay:last-child {
+    border-right: none;
+  }
+
+  .uss-column-tag {
     font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 0.8px;
+    font-weight: 900;
+    letter-spacing: 0.6px;
     color: #f1f5f9;
     background: #090d16;
     border: 1px solid #334155;
     border-radius: 4px;
-    padding: 3px 18px;
-    margin-bottom: 8px;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+    padding: 3px 14px;
+    margin-bottom: 6px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.7);
   }
 
-  .uss-escutcheon-unit {
+  .uss-lever-tier {
     width: 100%;
-    background: #0d1422;
-    border: 1px solid #1e293b;
-    border-radius: 6px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 8px 6px;
-    margin-bottom: 8px;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+    margin-bottom: 4px;
   }
 
-  .uss-jewel-header {
+  .blank-tier {
+    height: 146px;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 20px;
-    width: 100%;
-    margin-bottom: 2px;
   }
 
-  .uss-jewel-header.three-jewels {
-    gap: 12px;
+  .blank-indicator {
+    font-size: 11px;
+    font-weight: 800;
+    color: #334155;
+    letter-spacing: 1px;
   }
 
-  .jewel-cell {
+  /* Jewel Indicator Row: Left=x:36px (-36 from center), Right=x:108px (+36 from center) */
+  .uss-jewel-strip {
+    position: relative;
+    width: 144px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .jewel-mount {
+    position: absolute;
     display: flex;
     flex-direction: column;
     align-items: center;
   }
 
-  /* Authentic Faceted Glass Jewel Lamp with Raised Chrome Bezel Ring */
-  .uss-jewel-lamp {
-    width: 15px;
-    height: 15px;
+  /* Exactly 36px from edge = 72px center-to-center spacing */
+  .left-mount {
+    left: 28px;
+  }
+
+  .right-mount {
+    right: 28px;
+  }
+
+  .center-mount {
+    left: 64px;
+  }
+
+  .uss-jewel-lens {
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     border: 2px solid #cbd5e1;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
     transition: all 0.15s ease;
   }
 
@@ -914,7 +962,7 @@
 
   .jewel-opal.lit {
     background: radial-gradient(circle at 35% 35%, #ffffff 0%, #f1f5f9 40%, #cbd5e1 80%);
-    box-shadow: 0 0 12px #ffffff, 0 0 24px #e0f2fe;
+    box-shadow: 0 0 14px #ffffff, 0 0 28px #e0f2fe;
     border-color: #ffffff;
   }
 
@@ -924,7 +972,7 @@
 
   .jewel-amber.lit {
     background: radial-gradient(circle at 35% 35%, #fef08a 0%, #f59e0b 50%, #b45309 100%);
-    box-shadow: 0 0 12px #f59e0b, 0 0 24px #d97706;
+    box-shadow: 0 0 14px #f59e0b, 0 0 28px #d97706;
     border-color: #fef08a;
   }
 
@@ -934,7 +982,7 @@
 
   .jewel-red.lit {
     background: radial-gradient(circle at 35% 35%, #fca5a5 0%, #ef4444 50%, #991b1b 100%);
-    box-shadow: 0 0 12px #ef4444, 0 0 24px #b91c1c;
+    box-shadow: 0 0 14px #ef4444, 0 0 28px #b91c1c;
     border-color: #fca5a5;
   }
 
@@ -944,151 +992,138 @@
 
   .jewel-green.lit {
     background: radial-gradient(circle at 35% 35%, #86efac 0%, #22c55e 50%, #15803d 100%);
-    box-shadow: 0 0 12px #22c55e, 0 0 24px #15803d;
+    box-shadow: 0 0 14px #22c55e, 0 0 28px #15803d;
     border-color: #86efac;
   }
 
-  .jewel-caption {
+  .jewel-letter {
     font-size: 8px;
     font-weight: 800;
     color: #64748b;
     margin-top: 1px;
   }
 
-  .uss-appliance-number {
-    font-size: 14px;
+  .lever-number-stamp {
+    font-size: 15px;
     font-weight: 900;
-    color: #f1f5f9;
+    color: #f8fafc;
     font-family: 'Arial', sans-serif;
   }
 
-  /* Lever Bracket and Authentic US&S Molded Teardrop Paddle */
-  .uss-lever-bracket {
+  /* 3x-4x Large Authentic US&S Molded Teardrop Paddle Levers */
+  .uss-lever-pivot-box {
     position: relative;
-    width: 68px;
-    height: 74px;
+    width: 72px;
+    height: 98px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
   }
 
-  .uss-paddle-lever-svg {
-    width: 60px;
-    height: 74px;
-    transform-origin: 30px 52px;
+  .uss-large-paddle-svg {
+    width: 72px;
+    height: 98px;
+    transform-origin: 36px 72px;
     transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
-  /* Switch Lever Detents: 0° Normal (Up), 60° Reverse (Right/Down) */
-  .uss-paddle-lever-svg.lever-reverse {
-    transform: rotate(60deg);
+  /* Switch Lever: 2 POSITIONS ONLY - Normal UP (0°) ↔ Reverse DOWN (180°) */
+  .uss-large-paddle-svg.paddle-reverse {
+    transform: rotate(180deg);
   }
 
-  /* Signal Lever Detents: -45° Left, 0° Stop, +45° Right */
-  .uss-paddle-lever-svg.lever-signal-left {
+  /* Signal Lever: 3 POSITIONS - Left (-45°) ↔ Stop (0°) ↔ Right (+45°) */
+  .uss-large-paddle-svg.paddle-signal-left {
     transform: rotate(-45deg);
   }
 
-  .uss-paddle-lever-svg.lever-signal-stop {
+  .uss-large-paddle-svg.paddle-signal-stop {
     transform: rotate(0deg);
   }
 
-  .uss-paddle-lever-svg.lever-signal-right {
+  .uss-large-paddle-svg.paddle-signal-right {
     transform: rotate(45deg);
   }
 
-  /* Stamped Detent Scale below lever hub */
-  .uss-detent-scale {
+  .detent-legend {
     display: flex;
     justify-content: space-between;
     width: 64px;
-    font-size: 10px;
-    font-weight: 800;
+    font-size: 11px;
+    font-weight: 900;
     color: #64748b;
-    margin-top: 1px;
   }
 
-  .uss-detent-scale.three-detents {
-    width: 76px;
+  .detent-legend.three-marks {
+    width: 82px;
   }
 
-  .scale-detent {
+  .detent-mark {
     transition: color 0.15s ease;
   }
 
-  .scale-detent.active-detent {
+  .detent-mark.active-detent {
     color: #38bdf8;
-    text-shadow: 0 0 6px rgba(56, 189, 248, 0.6);
+    text-shadow: 0 0 8px rgba(56, 189, 248, 0.8);
   }
 
-  /* Machined US&S Code Button at Bottom */
-  .uss-code-button-assembly {
+  /* Perfectly Round Machined Metal US&S Code Button */
+  .uss-round-code-button {
     margin-top: auto;
-    width: 120px;
-    height: 38px;
+    width: 44px;
+    height: 44px;
     background: transparent;
     border: none;
     padding: 0;
     cursor: pointer;
   }
 
-  .code-button-rim {
-    width: 100%;
-    height: 100%;
-    border-radius: 6px;
-    background: linear-gradient(180deg, #64748b, #1e293b);
+  .round-button-outer-rim {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #cbd5e1 0%, #475569 50%, #0f172a 100%);
     border: 2px solid #94a3b8;
-    padding: 3px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6), inset 0 1px 2px rgba(255, 255, 255, 0.4);
+    padding: 4px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.7), inset 0 1px 2px rgba(255, 255, 255, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     transition: all 0.1s ease;
   }
 
-  .uss-code-button-assembly:hover .code-button-rim {
-    filter: brightness(1.15);
+  .uss-round-code-button:hover .round-button-outer-rim {
+    filter: brightness(1.2);
   }
 
-  .uss-code-button-assembly:active .code-button-rim {
-    transform: translateY(2px);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  .uss-round-code-button:active .round-button-outer-rim {
+    transform: scale(0.95);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
   }
 
-  .code-button-piston {
-    width: 100%;
-    height: 100%;
-    border-radius: 4px;
-    background: linear-gradient(180deg, #e2e8f0 0%, #cbd5e1 50%, #94a3b8 100%);
-    border: 1px solid #ffffff;
+  .round-button-piston {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #ffffff 0%, #cbd5e1 50%, #64748b 100%);
+    border: 1px solid #475569;
+    box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.8), 0 1px 2px rgba(0, 0, 0, 0.5);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 11px;
+  }
+
+  .button-piston-text {
+    font-size: 13px;
     font-weight: 900;
     color: #0f172a;
-    letter-spacing: 0.8px;
-    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.8);
   }
 
-  /* Blank Escutcheon Unit */
-  .blank-escutcheon {
-    height: 120px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .blank-escutcheon-label {
-    font-size: 10px;
-    font-weight: 700;
-    color: #334155;
-    letter-spacing: 1px;
-  }
-
-  /* Blocking Dogs */
-  .uss-dog-collar {
+  .uss-dog-badge {
     position: absolute;
-    top: -4px;
-    right: -8px;
+    top: 0;
+    right: -4px;
     font-size: 8px;
     font-weight: 900;
     padding: 2px 4px;
