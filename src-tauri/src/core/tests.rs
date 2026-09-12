@@ -1,3 +1,6 @@
+use super::corridor_matrix::{
+    CorridorMatrix, LinkType, MatrixApplianceType, MatrixCell, MatrixLink,
+};
 use super::graph::{EdgeKind, NodeKind, TrackEdge, TrackGraph, TrackNode};
 use super::model::{
     BoundaryType, ControlPoint, CpBoundary, Direction, Indication, MastType, SignalMast,
@@ -259,4 +262,131 @@ fn test_project_serialization_round_trip() {
     let restored = ProjectFile::from_json(&json).expect("Deserialization from JSON must succeed");
 
     assert_eq!(project, restored, "Project must round-trip through JSON with complete fidelity");
+}
+
+#[test]
+fn test_corridor_matrix_slot_expansion() {
+    let mut matrix = CorridorMatrix::new();
+
+    // Mainline cells on Level 0
+    matrix.add_cell(MatrixCell {
+        node_id: "WEST_MAIN".to_string(),
+        slot: 0,
+        level: 0,
+        appliance: MatrixApplianceType::Tangent,
+    });
+    matrix.add_cell(MatrixCell {
+        node_id: "SW1_PTS".to_string(),
+        slot: 1,
+        level: 0,
+        appliance: MatrixApplianceType::SwitchPoints { switch_id: "1".to_string(), facing_east: true, diverge_down: true },
+    });
+    matrix.add_cell(MatrixCell {
+        node_id: "EAST_MAIN".to_string(),
+        slot: 2,
+        level: 0,
+        appliance: MatrixApplianceType::Tangent,
+    });
+
+    // Siding cells on Level 1
+    matrix.add_cell(MatrixCell {
+        node_id: "WEST_SIDING".to_string(),
+        slot: 0,
+        level: 1,
+        appliance: MatrixApplianceType::Tangent,
+    });
+    matrix.add_cell(MatrixCell {
+        node_id: "EAST_SIDING".to_string(),
+        slot: 2,
+        level: 1,
+        appliance: MatrixApplianceType::Tangent,
+    });
+
+    // 45° Diverge link from (Slot 1, Level 0) to (Slot 2, Level 1)
+    matrix.add_link(MatrixLink {
+        id: "L_DIV".to_string(),
+        from_node: "SW1_PTS".to_string(),
+        to_node: "EAST_SIDING".to_string(),
+        from_slot: 1,
+        from_level: 0,
+        to_slot: 2,
+        to_level: 1,
+        link_type: LinkType::Diagonal45,
+        circuit_id: "1T".to_string(),
+    });
+
+    assert!(matrix.validate_geometry().is_empty(), "Initial geometry must be valid");
+
+    // Insert a new station column at slot 2 (expanding the corridor matrix)
+    matrix.insert_station_column(2);
+
+    let cell_east_main = matrix.cells.iter().find(|c| c.node_id == "EAST_MAIN").unwrap();
+    let cell_east_siding = matrix.cells.iter().find(|c| c.node_id == "EAST_SIDING").unwrap();
+    assert_eq!(cell_east_main.slot, 3, "All downstream nodes on Level 0 must shift to slot 3");
+    assert_eq!(cell_east_siding.slot, 3, "All downstream nodes on Level 1 must shift to slot 3 in unison");
+
+    let link_div = matrix.links.iter().find(|l| l.id == "L_DIV").unwrap();
+    assert_eq!(link_div.to_slot, 3, "Link target must shift in unison");
+}
+
+#[test]
+fn test_corridor_matrix_rotate_and_flip() {
+    let mut matrix = CorridorMatrix::new();
+    matrix.add_cell(MatrixCell {
+        node_id: "SW1_PTS".to_string(),
+        slot: 2,
+        level: 0,
+        appliance: MatrixApplianceType::SwitchPoints {
+            switch_id: "1".to_string(),
+            facing_east: true,
+            diverge_down: true,
+        },
+    });
+    matrix.add_link(MatrixLink {
+        id: "L_REV".to_string(),
+        from_node: "SW1_PTS".to_string(),
+        to_node: "SIDING_JOINT".to_string(),
+        from_slot: 2,
+        from_level: 0,
+        to_slot: 3,
+        to_level: 1,
+        link_type: LinkType::Diagonal45,
+        circuit_id: "1T".to_string(),
+    });
+
+    // Flip switch diverge side (Diverge Down -> Diverge Up)
+    assert!(matrix.flip_switch("1"));
+    let link_after_flip = matrix.links.iter().find(|l| l.id == "L_REV").unwrap();
+    assert_eq!(link_after_flip.to_level, -1, "Flipping must redirect reverse branch to Level -1");
+
+    // Rotate switch facing direction (Facing East -> Facing West / Trailing)
+    assert!(matrix.rotate_switch("1"));
+    let link_after_rot = matrix.links.iter().find(|l| l.id == "L_REV").unwrap();
+    assert_eq!(link_after_rot.to_slot, 1, "Rotating must redirect reverse branch Westward to Slot 1");
+}
+
+#[test]
+fn test_corridor_matrix_coordinate_projection() {
+    let mut matrix = CorridorMatrix::new();
+    matrix.origin_x_px = 100.0;
+    matrix.origin_y_px = 200.0;
+    matrix.col_spacing_px = 150.0;
+    matrix.row_spacing_px = 80.0;
+
+    matrix.add_cell(MatrixCell {
+        node_id: "NODE_A".to_string(),
+        slot: 0,
+        level: 0,
+        appliance: MatrixApplianceType::Tangent,
+    });
+    matrix.add_cell(MatrixCell {
+        node_id: "NODE_B".to_string(),
+        slot: 2,
+        level: 1,
+        appliance: MatrixApplianceType::Tangent,
+    });
+
+    let coords = matrix.project_coordinates();
+    assert_eq!(coords.get("NODE_A"), Some(&(100.0, 200.0)));
+    assert_eq!(coords.get("NODE_B"), Some(&(400.0, 280.0)));
 }

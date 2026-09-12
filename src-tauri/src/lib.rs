@@ -1,6 +1,7 @@
 pub mod core;
 
 use std::collections::HashMap;
+use core::corridor_matrix::CorridorMatrix;
 use core::graph::{DrcViolation, EdgeKind, NodeKind, TrackEdge, TrackGraph, TrackNode};
 use core::model::{
     BoundaryType, ControlPoint, CpBoundary, Direction, MastType, SignalMast, SpeedClass,
@@ -198,6 +199,33 @@ fn infer_speeds(mut graph: TrackGraph) -> Result<HashMap<String, SpeedClass>, St
     Ok(graph.infer_switch_speeds())
 }
 
+/// Computes coordinate projections from a CorridorMatrix.
+#[tauri::command]
+fn project_matrix_coordinates(matrix: CorridorMatrix) -> Result<HashMap<String, (f64, f64)>, String> {
+    Ok(matrix.project_coordinates())
+}
+
+/// Inserts a new station column into a CorridorMatrix.
+#[tauri::command]
+fn matrix_insert_column(mut matrix: CorridorMatrix, slot: usize) -> Result<CorridorMatrix, String> {
+    matrix.insert_station_column(slot);
+    Ok(matrix)
+}
+
+/// Rotates a switch in a CorridorMatrix (Facing East <-> Facing West / Trailing).
+#[tauri::command]
+fn matrix_rotate_switch(mut matrix: CorridorMatrix, switch_id: String) -> Result<CorridorMatrix, String> {
+    matrix.rotate_switch(&switch_id);
+    Ok(matrix)
+}
+
+/// Flips a switch diverge side in a CorridorMatrix (Diverge Up <-> Diverge Down).
+#[tauri::command]
+fn matrix_flip_switch(mut matrix: CorridorMatrix, switch_id: String) -> Result<CorridorMatrix, String> {
+    matrix.flip_switch(&switch_id);
+    Ok(matrix)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -206,7 +234,11 @@ pub fn run() {
             load_demo_project,
             synthesize_routes,
             run_drc,
-            infer_speeds
+            infer_speeds,
+            project_matrix_coordinates,
+            matrix_insert_column,
+            matrix_rotate_switch,
+            matrix_flip_switch
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
