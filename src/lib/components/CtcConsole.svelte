@@ -305,6 +305,13 @@
               <stop offset="70%" stop-color="#64748b" />
               <stop offset="100%" stop-color="#1e293b" />
             </radialGradient>
+
+            <!-- Embossed Metal Shield Plate Gradient -->
+            <linearGradient id="shield-plate-metal" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#2a3440" />
+              <stop offset="25%" stop-color="#18202a" />
+              <stop offset="100%" stop-color="#0e1318" />
+            </linearGradient>
           </defs>
 
           <!-- Board Surface Background (Black) -->
@@ -460,33 +467,32 @@
       <div class="uss-continuous-console">
         <!-- COLUMN 0: Unused Column with Pre-Punched Empty Holes -->
         <div class="uss-column-bay unused-column">
-          <div class="hole-screw-top"></div>
-          <div class="hole-lamps-switch">
-            <div class="punched-hole"></div>
-            <div class="punched-hole"></div>
-          </div>
-          <div class="hole-lever-switch">
-            <div class="punched-hole-large"></div>
-          </div>
-          <div class="hole-screw-mid"></div>
-          <div class="hole-lamps-signal">
-            <div class="punched-hole-center"></div>
-            <div class="punched-hole-row">
-              <div class="punched-hole"></div>
-              <div class="punched-hole"></div>
-            </div>
-          </div>
-          <div class="hole-lever-signal">
-            <div class="punched-hole-large"></div>
-          </div>
-          <div class="hole-code-button">
-            <div class="punched-hole-button"></div>
-          </div>
+          <svg viewBox="0 0 144 480" class="uss-unused-bay-svg">
+            <!-- Top Mounting Screw -->
+            <circle cx="72" cy="14" r="4.5" fill="#080c12" stroke="#1e2918" stroke-width="1.5" />
+            <!-- Switch Lamp Holes (Matching active switch lamps at x=36, x=108, y=34) -->
+            <circle cx="36" cy="34" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+            <circle cx="108" cy="34" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+            <!-- Switch Lever Shaft Hole (Matching active lever pivot at x=72, y=144) -->
+            <circle cx="72" cy="144" r="14" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+            <circle cx="72" cy="144" r="4" fill="#040609" />
+            <!-- Mid Mounting Screw -->
+            <circle cx="72" cy="180" r="4.5" fill="#080c12" stroke="#1e2918" stroke-width="1.5" />
+            <!-- Signal Lamp Holes (Matching active signal lamps: Stop at 72,198; L/R at 36,224 and 108,224) -->
+            <circle cx="72" cy="198" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+            <circle cx="36" cy="224" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+            <circle cx="108" cy="224" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+            <!-- Signal Lever Shaft Hole (Matching active signal lever pivot at x=72, y=334) -->
+            <circle cx="72" cy="334" r="14" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+            <circle cx="72" cy="334" r="4" fill="#040609" />
+            <!-- Code Button Hole (Matching active code button at x=72, y=438) -->
+            <circle cx="72" cy="438" r="18" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+          </svg>
         </div>
 
         <!-- COLUMN 1: Active Station Column 1 (Switch 1 & Signal 4) -->
         <div class="uss-column-bay">
-          <!-- Switch 1 Unit (Lamps: N=Green, R=Yellow/Amber on 2" centers) -->
+          <!-- Switch 1 Unit (Lamps: N=Green, R=Yellow/Amber on 2" centers at y=34) -->
           <div class="uss-lever-tier">
             <div class="uss-switch-lamp-cluster">
               <div class="jewel-mount left-mount" title="Normal Correspondence (1NWK) - Green">
@@ -497,54 +503,62 @@
               </div>
             </div>
 
-            <!-- Embossed Metal Plate behind Switch 1 Lever with N and R Angled to Match Throw -->
+            <!-- US&S Shield Plate & Lever (Pivoting at y=144, matching punched hole) -->
             <!-- svelte-ignore a11y_click_events_have_key_events -->
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div
-              class="uss-lever-plate"
+              class="uss-lever-shield-container"
               onclick={() => toggleSwitchLever('1')}
               oncontextmenu={(e) => cycleDog('switch', '1', e)}
               title="Switch 1: Click lever to throw (Normal 30° Left ↔ Reverse 30° Right) | Right-click to dog"
             >
-              <div class="plate-top-number">1</div>
-              <div class="plate-type-label">SWITCH</div>
-              <div class="plate-pos-left" class:active-pos={switchDemands['1'] === 'Normal'}>N</div>
-              <div class="plate-pos-right" class:active-pos={switchDemands['1'] === 'Reverse'}>R</div>
+              <svg viewBox="0 0 144 116" class="uss-shield-svg">
+                <!-- US&S Shield Plate: Triangle with Pot Lid, bottom vertex at (72, 98) around lever hole -->
+                <path
+                  d="M 50,6 L 94,6 Q 102,6 106,14 L 122,30 Q 128,36 120,46 L 88,94 Q 78,106 72,106 Q 66,106 56,94 L 24,46 Q 16,36 22,30 L 38,14 Q 42,6 50,6 Z"
+                  fill="url(#shield-plate-metal)"
+                  stroke="#94a3b8"
+                  stroke-width="1.5"
+                />
+                <!-- Center Stamped Number & Type Label in Raised Pot Lid -->
+                <text x="72" y="21" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="900" font-family="'Arial', sans-serif">1</text>
+                <text x="72" y="30" text-anchor="middle" fill="#94a3b8" font-size="7.5" font-weight="800" letter-spacing="1">SWITCH</text>
 
-              <!-- US&S 2-Position Switch Lever (-30° Left ↔ +30° Right) -->
-              <div class="uss-lever-pivot-box">
-                <svg
-                  class="uss-large-paddle-svg"
-                  class:paddle-switch-normal={switchDemands['1'] === 'Normal'}
-                  class:paddle-switch-reverse={switchDemands['1'] === 'Reverse'}
-                  viewBox="0 0 72 108"
-                >
+                <!-- Unanimated Large Bold White Letters on Shoulders Directly Under Lamps -->
+                <text x="36" y="44" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="900" font-family="'Arial', sans-serif">N</text>
+                <text x="108" y="44" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="900" font-family="'Arial', sans-serif">R</text>
+
+                <!-- Lever Assembly (Pivots at x=72, y=94 - tip stays below number/words!) -->
+                <g class="uss-lever-rotor" transform="translate(72, 94) rotate({switchDemands['1'] === 'Normal' ? -30 : 30})">
+                  <!-- Teardrop Paddle Blade -->
                   <path
-                    d="M24,72 C20,52 22,26 28,8 C32,2 40,2 44,8 C50,26 52,52 48,72 C44,82 28,82 24,72 Z"
+                    d="M -7,0 C -10,-14 -8,-36 -3,-46 C -1,-50 1,-50 3,-46 C 8,-36 10,-14 7,0 C 4,6 -4,6 -7,0 Z"
                     fill="url(#paddle-plastic)"
                     stroke="#0f172a"
-                    stroke-width="2"
+                    stroke-width="1.5"
                   />
-                  <line x1="36" y1="6" x2="36" y2="60" stroke="#f8fafc" stroke-width="3" stroke-linecap="round" />
-                  <circle cx="36" cy="72" r="20" fill="url(#hub-chrome)" stroke="#090d16" stroke-width="2" />
-                  <circle cx="36" cy="72" r="8" fill="#1e293b" />
-                </svg>
+                  <!-- White Molded Pointer Stripe -->
+                  <line x1="0" y1="-46" x2="0" y2="-6" stroke="#f8fafc" stroke-width="2.5" stroke-linecap="round" />
+                  <!-- Center Chrome Hub -->
+                  <circle cx="0" cy="0" r="14" fill="url(#hub-chrome)" stroke="#090d16" stroke-width="1.5" />
+                  <circle cx="0" cy="0" r="5" fill="#1e293b" />
+                </g>
+              </svg>
 
-                {#if switchDogs['1'] !== 'none'}
-                  <div class="uss-dog-badge dog-{switchDogs['1']}">DOG</div>
-                {/if}
-              </div>
+              {#if switchDogs['1'] !== 'none'}
+                <div class="uss-dog-badge dog-{switchDogs['1']}">DOG</div>
+              {/if}
             </div>
           </div>
 
-          <!-- Signal 4 Unit (2 Layers: Upper Center Red STOP, Lower Left Green L & Right Green R) -->
+          <!-- Signal 4 Unit (2 Layers: Upper Center Red STOP at y=198, Lower Green L & R at y=224) -->
           <div class="uss-lever-tier">
             <div class="uss-signal-lamp-cluster">
               <!-- Upper Layer (Center): Red Stop Indication -->
               <div class="signal-lamp-stop-top" title="Stop Indication - Red">
                 <span class="uss-jewel-lens jewel-red" class:lit={signalAspects['4NA'] === 'Stop' && signalAspects['4SA'] === 'Stop'}></span>
               </div>
-              <!-- Lower Layer (Left & Right on 2" centers): Green Permissive Indications -->
+              <!-- Lower Layer (Left & Right on 2\" centers): Green Permissive Indications -->
               <div class="signal-lamp-row-bottom">
                 <div class="jewel-mount left-mount" title="Left Permissive (4NA) - Green">
                   <span class="uss-jewel-lens jewel-green" class:lit={signalAspects['4NA'] !== 'Stop'}></span>
@@ -555,46 +569,51 @@
               </div>
             </div>
 
-            <!-- Embossed Metal Plate behind Signal 4 Lever with L, STOP, R -->
+            <!-- Signal 4 Shield Plate & Lever (Pivoting at y=334, matching punched hole) -->
             <!-- svelte-ignore a11y_click_events_have_key_events -->
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div
-              class="uss-lever-plate"
+              class="uss-lever-shield-container"
               onclick={() => cycleSignalLever('4')}
               oncontextmenu={(e) => cycleDog('signal', '4', e)}
               title="Signal 4: Click lever to throw (Left 30° ↔ Stop Center 0° ↔ Right 30°) | Right-click to dog"
             >
-              <div class="plate-top-number">4</div>
-              <div class="plate-type-label">SIGNAL</div>
-              <div class="plate-pos-left" class:active-pos={signalDemands['4'] === 'Left'}>L</div>
-              <div class="plate-pos-center" class:active-pos={signalDemands['4'] === 'Stop'}>STOP</div>
-              <div class="plate-pos-right" class:active-pos={signalDemands['4'] === 'Right'}>R</div>
+              <svg viewBox="0 0 144 116" class="uss-shield-svg">
+                <path
+                  d="M 50,6 L 94,6 Q 102,6 106,14 L 122,30 Q 128,36 120,46 L 88,94 Q 78,106 72,106 Q 66,106 56,94 L 24,46 Q 16,36 22,30 L 38,14 Q 42,6 50,6 Z"
+                  fill="url(#shield-plate-metal)"
+                  stroke="#94a3b8"
+                  stroke-width="1.5"
+                />
+                <text x="72" y="21" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="900" font-family="'Arial', sans-serif">4</text>
+                <text x="72" y="30" text-anchor="middle" fill="#94a3b8" font-size="7.5" font-weight="800" letter-spacing="1">SIGNAL</text>
 
-              <!-- US&S 3-Position Signal Paddle Lever (-30° Left ↔ 0° Stop ↔ +30° Right) -->
-              <div class="uss-lever-pivot-box">
-                <svg
-                  class="uss-large-paddle-svg paddle-signal-{signalDemands['4'].toLowerCase()}"
-                  viewBox="0 0 72 108"
-                >
+                <!-- Unanimated Large Bold White Labels -->
+                <text x="36" y="44" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="900" font-family="'Arial', sans-serif">L</text>
+                <text x="72" y="42" text-anchor="middle" fill="#ffffff" font-size="8.5" font-weight="900" font-family="'Arial', sans-serif">STOP</text>
+                <text x="108" y="44" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="900" font-family="'Arial', sans-serif">R</text>
+
+                <!-- Signal 4 Paddle Lever (Pivoting at x=72, y=94) -->
+                <g class="uss-lever-rotor" transform="translate(72, 94) rotate({signalDemands['4'] === 'Left' ? -30 : signalDemands['4'] === 'Right' ? 30 : 0})">
                   <path
-                    d="M24,72 C20,52 22,26 28,8 C32,2 40,2 44,8 C50,26 52,52 48,72 C44,82 28,82 24,72 Z"
+                    d="M -7,0 C -10,-14 -8,-36 -3,-46 C -1,-50 1,-50 3,-46 C 8,-36 10,-14 7,0 C 4,6 -4,6 -7,0 Z"
                     fill="url(#paddle-plastic)"
                     stroke="#0f172a"
-                    stroke-width="2"
+                    stroke-width="1.5"
                   />
-                  <line x1="36" y1="6" x2="36" y2="60" stroke="#f8fafc" stroke-width="3" stroke-linecap="round" />
-                  <circle cx="36" cy="72" r="20" fill="url(#hub-chrome)" stroke="#090d16" stroke-width="2" />
-                  <circle cx="36" cy="72" r="8" fill="#1e293b" />
-                </svg>
+                  <line x1="0" y1="-46" x2="0" y2="-6" stroke="#f8fafc" stroke-width="2.5" stroke-linecap="round" />
+                  <circle cx="0" cy="0" r="14" fill="url(#hub-chrome)" stroke="#090d16" stroke-width="1.5" />
+                  <circle cx="0" cy="0" r="5" fill="#1e293b" />
+                </g>
+              </svg>
 
-                {#if signalDogs['4'] !== 'none'}
-                  <div class="uss-dog-badge dog-{signalDogs['4']}">DOG</div>
-                {/if}
-              </div>
+              {#if signalDogs['4'] !== 'none'}
+                <div class="uss-dog-badge dog-{signalDogs['4']}">DOG</div>
+              {/if}
             </div>
           </div>
 
-          <!-- Authentic Round Machined US&S Code Button (Never cut off) -->
+          <!-- Authentic Round Machined US&S Code Button at y=438 (Never cut off) -->
           <div class="code-button-mount">
             <button class="uss-round-code-button" onclick={() => punchCodeButton(1)} title="Punch to transmit atomic snapshot">
               <div class="round-button-outer-rim">
@@ -619,42 +638,44 @@
               </div>
             </div>
 
-            <!-- Embossed Metal Plate behind Switch 3 Lever -->
+            <!-- Switch 3 Shield Plate & Lever -->
             <!-- svelte-ignore a11y_click_events_have_key_events -->
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div
-              class="uss-lever-plate"
+              class="uss-lever-shield-container"
               onclick={() => toggleSwitchLever('3')}
               oncontextmenu={(e) => cycleDog('switch', '3', e)}
               title="Switch 3: Click lever to throw (Normal 30° Left ↔ Reverse 30° Right) | Right-click to dog"
             >
-              <div class="plate-top-number">3</div>
-              <div class="plate-type-label">SWITCH</div>
-              <div class="plate-pos-left" class:active-pos={switchDemands['3'] === 'Normal'}>N</div>
-              <div class="plate-pos-right" class:active-pos={switchDemands['3'] === 'Reverse'}>R</div>
+              <svg viewBox="0 0 144 116" class="uss-shield-svg">
+                <path
+                  d="M 50,6 L 94,6 Q 102,6 106,14 L 122,30 Q 128,36 120,46 L 88,94 Q 78,106 72,106 Q 66,106 56,94 L 24,46 Q 16,36 22,30 L 38,14 Q 42,6 50,6 Z"
+                  fill="url(#shield-plate-metal)"
+                  stroke="#94a3b8"
+                  stroke-width="1.5"
+                />
+                <text x="72" y="21" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="900" font-family="'Arial', sans-serif">3</text>
+                <text x="72" y="30" text-anchor="middle" fill="#94a3b8" font-size="7.5" font-weight="800" letter-spacing="1">SWITCH</text>
 
-              <div class="uss-lever-pivot-box">
-                <svg
-                  class="uss-large-paddle-svg"
-                  class:paddle-switch-normal={switchDemands['3'] === 'Normal'}
-                  class:paddle-switch-reverse={switchDemands['3'] === 'Reverse'}
-                  viewBox="0 0 72 108"
-                >
+                <text x="36" y="44" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="900" font-family="'Arial', sans-serif">N</text>
+                <text x="108" y="44" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="900" font-family="'Arial', sans-serif">R</text>
+
+                <g class="uss-lever-rotor" transform="translate(72, 94) rotate({switchDemands['3'] === 'Normal' ? -30 : 30})">
                   <path
-                    d="M24,72 C20,52 22,26 28,8 C32,2 40,2 44,8 C50,26 52,52 48,72 C44,82 28,82 24,72 Z"
+                    d="M -7,0 C -10,-14 -8,-36 -3,-46 C -1,-50 1,-50 3,-46 C 8,-36 10,-14 7,0 C 4,6 -4,6 -7,0 Z"
                     fill="url(#paddle-plastic)"
                     stroke="#0f172a"
-                    stroke-width="2"
+                    stroke-width="1.5"
                   />
-                  <line x1="36" y1="6" x2="36" y2="60" stroke="#f8fafc" stroke-width="3" stroke-linecap="round" />
-                  <circle cx="36" cy="72" r="20" fill="url(#hub-chrome)" stroke="#090d16" stroke-width="2" />
-                  <circle cx="36" cy="72" r="8" fill="#1e293b" />
-                </svg>
+                  <line x1="0" y1="-46" x2="0" y2="-6" stroke="#f8fafc" stroke-width="2.5" stroke-linecap="round" />
+                  <circle cx="0" cy="0" r="14" fill="url(#hub-chrome)" stroke="#090d16" stroke-width="1.5" />
+                  <circle cx="0" cy="0" r="5" fill="#1e293b" />
+                </g>
+              </svg>
 
-                {#if switchDogs['3'] !== 'none'}
-                  <div class="uss-dog-badge dog-{switchDogs['3']}">DOG</div>
-                {/if}
-              </div>
+              {#if switchDogs['3'] !== 'none'}
+                <div class="uss-dog-badge dog-{switchDogs['3']}">DOG</div>
+              {/if}
             </div>
           </div>
 
@@ -674,41 +695,45 @@
               </div>
             </div>
 
-            <!-- Embossed Metal Plate behind Signal 2 Lever -->
+            <!-- Signal 2 Shield Plate & Lever -->
             <!-- svelte-ignore a11y_click_events_have_key_events -->
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div
-              class="uss-lever-plate"
+              class="uss-lever-shield-container"
               onclick={() => cycleSignalLever('2')}
               oncontextmenu={(e) => cycleDog('signal', '2', e)}
               title="Signal 2: Click lever to throw (Left 30° ↔ Stop Center 0° ↔ Right 30°) | Right-click to dog"
             >
-              <div class="plate-top-number">2</div>
-              <div class="plate-type-label">SIGNAL</div>
-              <div class="plate-pos-left" class:active-pos={signalDemands['2'] === 'Left'}>L</div>
-              <div class="plate-pos-center" class:active-pos={signalDemands['2'] === 'Stop'}>STOP</div>
-              <div class="plate-pos-right" class:active-pos={signalDemands['2'] === 'Right'}>R</div>
+              <svg viewBox="0 0 144 116" class="uss-shield-svg">
+                <path
+                  d="M 50,6 L 94,6 Q 102,6 106,14 L 122,30 Q 128,36 120,46 L 88,94 Q 78,106 72,106 Q 66,106 56,94 L 24,46 Q 16,36 22,30 L 38,14 Q 42,6 50,6 Z"
+                  fill="url(#shield-plate-metal)"
+                  stroke="#94a3b8"
+                  stroke-width="1.5"
+                />
+                <text x="72" y="21" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="900" font-family="'Arial', sans-serif">2</text>
+                <text x="72" y="30" text-anchor="middle" fill="#94a3b8" font-size="7.5" font-weight="800" letter-spacing="1">SIGNAL</text>
 
-              <div class="uss-lever-pivot-box">
-                <svg
-                  class="uss-large-paddle-svg paddle-signal-{signalDemands['2'].toLowerCase()}"
-                  viewBox="0 0 72 108"
-                >
+                <text x="36" y="44" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="900" font-family="'Arial', sans-serif">L</text>
+                <text x="72" y="42" text-anchor="middle" fill="#ffffff" font-size="8.5" font-weight="900" font-family="'Arial', sans-serif">STOP</text>
+                <text x="108" y="44" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="900" font-family="'Arial', sans-serif">R</text>
+
+                <g class="uss-lever-rotor" transform="translate(72, 94) rotate({signalDemands['2'] === 'Left' ? -30 : signalDemands['2'] === 'Right' ? 30 : 0})">
                   <path
-                    d="M24,72 C20,52 22,26 28,8 C32,2 40,2 44,8 C50,26 52,52 48,72 C44,82 28,82 24,72 Z"
+                    d="M -7,0 C -10,-14 -8,-36 -3,-46 C -1,-50 1,-50 3,-46 C 8,-36 10,-14 7,0 C 4,6 -4,6 -7,0 Z"
                     fill="url(#paddle-plastic)"
                     stroke="#0f172a"
-                    stroke-width="2"
+                    stroke-width="1.5"
                   />
-                  <line x1="36" y1="6" x2="36" y2="60" stroke="#f8fafc" stroke-width="3" stroke-linecap="round" />
-                  <circle cx="36" cy="72" r="20" fill="url(#hub-chrome)" stroke="#090d16" stroke-width="2" />
-                  <circle cx="36" cy="72" r="8" fill="#1e293b" />
-                </svg>
+                  <line x1="0" y1="-46" x2="0" y2="-6" stroke="#f8fafc" stroke-width="2.5" stroke-linecap="round" />
+                  <circle cx="0" cy="0" r="14" fill="url(#hub-chrome)" stroke="#090d16" stroke-width="1.5" />
+                  <circle cx="0" cy="0" r="5" fill="#1e293b" />
+                </g>
+              </svg>
 
-                {#if signalDogs['2'] !== 'none'}
-                  <div class="uss-dog-badge dog-{signalDogs['2']}">DOG</div>
-                {/if}
-              </div>
+              {#if signalDogs['2'] !== 'none'}
+                <div class="uss-dog-badge dog-{signalDogs['2']}">DOG</div>
+              {/if}
             </div>
           </div>
 
@@ -737,48 +762,56 @@
               </div>
             </div>
 
-            <!-- Embossed Metal Plate behind Lock 5 Lever -->
+            <!-- Lock 5 Shield Plate & Lever -->
             <!-- svelte-ignore a11y_click_events_have_key_events -->
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div
-              class="uss-lever-plate"
+              class="uss-lever-shield-container"
               onclick={() => toggleSwitchLever('5')}
               oncontextmenu={(e) => cycleDog('switch', '5', e)}
               title="Lock 5: Click lever to throw (Locked 30° Left ↔ Unlocked 30° Right) | Right-click to dog"
             >
-              <div class="plate-top-number">5</div>
-              <div class="plate-type-label">LOCK</div>
-              <div class="plate-pos-left" class:active-pos={switchDemands['5'] === 'Normal'}>N</div>
-              <div class="plate-pos-right" class:active-pos={switchDemands['5'] === 'Reverse'}>R</div>
+              <svg viewBox="0 0 144 116" class="uss-shield-svg">
+                <path
+                  d="M 50,6 L 94,6 Q 102,6 106,14 L 122,30 Q 128,36 120,46 L 88,94 Q 78,106 72,106 Q 66,106 56,94 L 24,46 Q 16,36 22,30 L 38,14 Q 42,6 50,6 Z"
+                  fill="url(#shield-plate-metal)"
+                  stroke="#94a3b8"
+                  stroke-width="1.5"
+                />
+                <text x="72" y="21" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="900" font-family="'Arial', sans-serif">5</text>
+                <text x="72" y="30" text-anchor="middle" fill="#94a3b8" font-size="7.5" font-weight="800" letter-spacing="1">LOCK</text>
 
-              <div class="uss-lever-pivot-box">
-                <svg
-                  class="uss-large-paddle-svg"
-                  class:paddle-switch-normal={switchDemands['5'] === 'Normal'}
-                  class:paddle-switch-reverse={switchDemands['5'] === 'Reverse'}
-                  viewBox="0 0 72 108"
-                >
+                <text x="36" y="44" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="900" font-family="'Arial', sans-serif">LKD</text>
+                <text x="108" y="44" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="900" font-family="'Arial', sans-serif">UNLKD</text>
+
+                <g class="uss-lever-rotor" transform="translate(72, 94) rotate({switchDemands['5'] === 'Normal' ? -30 : 30})">
                   <path
-                    d="M24,72 C20,52 22,26 28,8 C32,2 40,2 44,8 C50,26 52,52 48,72 C44,82 28,82 24,72 Z"
+                    d="M -7,0 C -10,-14 -8,-36 -3,-46 C -1,-50 1,-50 3,-46 C 8,-36 10,-14 7,0 C 4,6 -4,6 -7,0 Z"
                     fill="url(#paddle-plastic)"
                     stroke="#0f172a"
-                    stroke-width="2"
+                    stroke-width="1.5"
                   />
-                  <line x1="36" y1="6" x2="36" y2="60" stroke="#f8fafc" stroke-width="3" stroke-linecap="round" />
-                  <circle cx="36" cy="72" r="20" fill="url(#hub-chrome)" stroke="#090d16" stroke-width="2" />
-                  <circle cx="36" cy="72" r="8" fill="#1e293b" />
-                </svg>
+                  <line x1="0" y1="-46" x2="0" y2="-6" stroke="#f8fafc" stroke-width="2.5" stroke-linecap="round" />
+                  <circle cx="0" cy="0" r="14" fill="url(#hub-chrome)" stroke="#090d16" stroke-width="1.5" />
+                  <circle cx="0" cy="0" r="5" fill="#1e293b" />
+                </g>
+              </svg>
 
-                {#if switchDogs['5'] !== 'none'}
-                  <div class="uss-dog-badge dog-{switchDogs['5']}">DOG</div>
-                {/if}
-              </div>
+              {#if switchDogs['5'] !== 'none'}
+                <div class="uss-dog-badge dog-{switchDogs['5']}">DOG</div>
+              {/if}
             </div>
           </div>
 
-          <!-- Blank Lower Section (No Signals at Station 3) -->
+          <!-- Blank Lower Section (Matching Signal Holes on Unused Column!) -->
           <div class="uss-lever-tier blank-tier">
-            <div class="blank-indicator">[ BLANK ]</div>
+            <svg viewBox="0 0 144 160" class="uss-blank-tier-svg">
+              <circle cx="72" cy="18" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+              <circle cx="36" cy="44" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+              <circle cx="108" cy="44" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+              <circle cx="72" cy="154" r="14" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+              <circle cx="72" cy="154" r="4" fill="#040609" />
+            </svg>
           </div>
 
           <!-- Code Button 3 -->
@@ -795,80 +828,56 @@
 
         <!-- COLUMN 4: Unused Column with Pre-Punched Empty Holes -->
         <div class="uss-column-bay unused-column">
-          <div class="hole-screw-top"></div>
-          <div class="hole-lamps-switch">
-            <div class="punched-hole"></div>
-            <div class="punched-hole"></div>
-          </div>
-          <div class="hole-lever-switch">
-            <div class="punched-hole-large"></div>
-          </div>
-          <div class="hole-screw-mid"></div>
-          <div class="hole-lamps-signal">
-            <div class="punched-hole-center"></div>
-            <div class="punched-hole-row">
-              <div class="punched-hole"></div>
-              <div class="punched-hole"></div>
-            </div>
-          </div>
-          <div class="hole-lever-signal">
-            <div class="punched-hole-large"></div>
-          </div>
-          <div class="hole-code-button">
-            <div class="punched-hole-button"></div>
-          </div>
+          <svg viewBox="0 0 144 480" class="uss-unused-bay-svg">
+            <circle cx="72" cy="14" r="4.5" fill="#080c12" stroke="#1e2918" stroke-width="1.5" />
+            <circle cx="36" cy="34" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+            <circle cx="108" cy="34" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+            <circle cx="72" cy="144" r="14" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+            <circle cx="72" cy="144" r="4" fill="#040609" />
+            <circle cx="72" cy="180" r="4.5" fill="#080c12" stroke="#1e2918" stroke-width="1.5" />
+            <circle cx="72" cy="198" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+            <circle cx="36" cy="224" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+            <circle cx="108" cy="224" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+            <circle cx="72" cy="334" r="14" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+            <circle cx="72" cy="334" r="4" fill="#040609" />
+            <circle cx="72" cy="438" r="18" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+          </svg>
         </div>
 
         <!-- COLUMN 5: Unused Column with Pre-Punched Empty Holes -->
         <div class="uss-column-bay unused-column">
-          <div class="hole-screw-top"></div>
-          <div class="hole-lamps-switch">
-            <div class="punched-hole"></div>
-            <div class="punched-hole"></div>
-          </div>
-          <div class="hole-lever-switch">
-            <div class="punched-hole-large"></div>
-          </div>
-          <div class="hole-screw-mid"></div>
-          <div class="hole-lamps-signal">
-            <div class="punched-hole-center"></div>
-            <div class="punched-hole-row">
-              <div class="punched-hole"></div>
-              <div class="punched-hole"></div>
-            </div>
-          </div>
-          <div class="hole-lever-signal">
-            <div class="punched-hole-large"></div>
-          </div>
-          <div class="hole-code-button">
-            <div class="punched-hole-button"></div>
-          </div>
+          <svg viewBox="0 0 144 480" class="uss-unused-bay-svg">
+            <circle cx="72" cy="14" r="4.5" fill="#080c12" stroke="#1e2918" stroke-width="1.5" />
+            <circle cx="36" cy="34" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+            <circle cx="108" cy="34" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+            <circle cx="72" cy="144" r="14" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+            <circle cx="72" cy="144" r="4" fill="#040609" />
+            <circle cx="72" cy="180" r="4.5" fill="#080c12" stroke="#1e2918" stroke-width="1.5" />
+            <circle cx="72" cy="198" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+            <circle cx="36" cy="224" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+            <circle cx="108" cy="224" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+            <circle cx="72" cy="334" r="14" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+            <circle cx="72" cy="334" r="4" fill="#040609" />
+            <circle cx="72" cy="438" r="18" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+          </svg>
         </div>
 
         <!-- COLUMN 6: Unused Column with Pre-Punched Empty Holes -->
         <div class="uss-column-bay unused-column">
-          <div class="hole-screw-top"></div>
-          <div class="hole-lamps-switch">
-            <div class="punched-hole"></div>
-            <div class="punched-hole"></div>
-          </div>
-          <div class="hole-lever-switch">
-            <div class="punched-hole-large"></div>
-          </div>
-          <div class="hole-screw-mid"></div>
-          <div class="hole-lamps-signal">
-            <div class="punched-hole-center"></div>
-            <div class="punched-hole-row">
-              <div class="punched-hole"></div>
-              <div class="punched-hole"></div>
-            </div>
-          </div>
-          <div class="hole-lever-signal">
-            <div class="punched-hole-large"></div>
-          </div>
-          <div class="hole-code-button">
-            <div class="punched-hole-button"></div>
-          </div>
+          <svg viewBox="0 0 144 480" class="uss-unused-bay-svg">
+            <circle cx="72" cy="14" r="4.5" fill="#080c12" stroke="#1e2918" stroke-width="1.5" />
+            <circle cx="36" cy="34" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+            <circle cx="108" cy="34" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+            <circle cx="72" cy="144" r="14" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+            <circle cx="72" cy="144" r="4" fill="#040609" />
+            <circle cx="72" cy="180" r="4.5" fill="#080c12" stroke="#1e2918" stroke-width="1.5" />
+            <circle cx="72" cy="198" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+            <circle cx="36" cy="224" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+            <circle cx="108" cy="224" r="8" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+            <circle cx="72" cy="334" r="14" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+            <circle cx="72" cy="334" r="4" fill="#040609" />
+            <circle cx="72" cy="438" r="18" fill="#080c12" stroke="#1e2918" stroke-width="2" />
+          </svg>
         </div>
       </div>
     </div>
@@ -943,8 +952,7 @@
     cursor: pointer;
   }
 
-  .track-block:hover line,
-  .track-block:hover path {
+  .track-block:hover line {
     stroke: #38bdf8;
   }
 
@@ -1113,123 +1121,38 @@
     margin-top: 1px;
   }
 
-  /* Embossed Metal Plate Behind Each Lever Switch */
-  .uss-lever-plate {
+  /* US&S Shield Plate & Lever Container */
+  .uss-lever-shield-container {
     position: relative;
-    width: 96px;
-    height: 94px;
+    width: 144px;
+    height: 116px;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(180deg, #1b2129 0%, #0d1116 100%);
-    border: 2px solid #64748b;
-    border-radius: 8px;
-    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.25), 0 4px 8px rgba(0, 0, 0, 0.7);
     cursor: pointer;
   }
 
-  .plate-top-number {
-    position: absolute;
-    top: 4px;
-    font-size: 15px;
-    font-weight: 900;
-    color: #f8fafc;
-    font-family: 'Arial', sans-serif;
+  .uss-shield-svg {
+    width: 144px;
+    height: 116px;
+    overflow: visible;
   }
 
-  .plate-type-label {
-    position: absolute;
-    top: 21px;
-    font-size: 8px;
-    font-weight: 800;
-    color: #94a3b8;
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-  }
-
-  .plate-pos-left {
-    position: absolute;
-    left: 8px;
-    top: 42px;
-    font-size: 13px;
-    font-weight: 900;
-    color: #64748b;
-    transition: all 0.15s ease;
-  }
-
-  .plate-pos-left.active-pos {
-    color: #38bdf8;
-    text-shadow: 0 0 8px rgba(56, 189, 248, 0.9);
-  }
-
-  .plate-pos-right {
-    position: absolute;
-    right: 8px;
-    top: 42px;
-    font-size: 13px;
-    font-weight: 900;
-    color: #64748b;
-    transition: all 0.15s ease;
-  }
-
-  .plate-pos-right.active-pos {
-    color: #38bdf8;
-    text-shadow: 0 0 8px rgba(56, 189, 248, 0.9);
-  }
-
-  .plate-pos-center {
-    position: absolute;
-    top: 32px;
-    font-size: 9px;
-    font-weight: 900;
-    color: #64748b;
-    letter-spacing: 0.5px;
-    transition: all 0.15s ease;
-  }
-
-  .plate-pos-center.active-pos {
-    color: #38bdf8;
-    text-shadow: 0 0 8px rgba(56, 189, 248, 0.9);
-  }
-
-  /* Lever Pivot Hub and Handle */
-  .uss-lever-pivot-box {
-    position: relative;
-    width: 72px;
-    height: 98px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .uss-large-paddle-svg {
-    width: 72px;
-    height: 98px;
-    transform-origin: 36px 72px;
+  .uss-lever-rotor {
     transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
-  /* Switch Lever: Normal 30° LEFT (-30°) ↔ Reverse 30° RIGHT (+30°) */
-  .uss-large-paddle-svg.paddle-switch-normal {
-    transform: rotate(-30deg);
+  /* Pre-Punched Empty Holes on Unused Columns and Blank Tiers */
+  .uss-unused-bay-svg {
+    width: 144px;
+    height: 480px;
+    opacity: 0.6;
   }
 
-  .uss-large-paddle-svg.paddle-switch-reverse {
-    transform: rotate(30deg);
-  }
-
-  /* Signal Lever: Left (-30°) ↔ Stop (0°) ↔ Right (+30°) */
-  .uss-large-paddle-svg.paddle-signal-left {
-    transform: rotate(-30deg);
-  }
-
-  .uss-large-paddle-svg.paddle-signal-stop {
-    transform: rotate(0deg);
-  }
-
-  .uss-large-paddle-svg.paddle-signal-right {
-    transform: rotate(30deg);
+  .uss-blank-tier-svg {
+    width: 144px;
+    height: 160px;
+    opacity: 0.6;
   }
 
   /* Code Button Mount: Never cut off */
