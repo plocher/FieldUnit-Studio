@@ -20,9 +20,31 @@
   let dragOffset = $state({ x: 0, y: 0 });
   let hasDragged = false;
 
-  // Group dragging from track line
+  // Solid Group Drag Engine with Initial Positions Map
   let isGroupDragging = false;
-  let lastDragPos = { x: 0, y: 0 };
+  let dragStartCanvas = { x: 0, y: 0 };
+  let initialNodePositions = new Map<string, { x: number; y: number }>();
+
+  function startGroupDrag(startX: number, startY: number) {
+    if (!studio.project) return;
+    isGroupDragging = true;
+    hasDragged = false;
+    dragStartCanvas = { x: startX, y: startY };
+    initialNodePositions.clear();
+
+    const ids = studio.selectedNodeIds.length > 0
+      ? studio.selectedNodeIds
+      : studio.selectedNodeId
+      ? [studio.selectedNodeId]
+      : [];
+
+    for (const id of ids) {
+      const node = studio.project.graph.nodes[id];
+      if (node) {
+        initialNodePositions.set(id, { x: node.x, y: node.y });
+      }
+    }
+  }
 
   // Smooth Edge Auto-Pan via requestAnimationFrame
   let panVelocity = { x: 0, y: 0 };
@@ -150,11 +172,13 @@
     }
 
     // 2. If clicking on an existing node group, start node/group drag
-    if ((event.target as HTMLElement).closest('.node-group')) {
+    const nodeEl = (event.target as HTMLElement).closest('.node-group');
+    if (nodeEl && event.button === 0) {
+      // Handled by startNodeDrag on the specific node
       return;
     }
 
-    // 3. Right-Click or Middle-Click or Space+Click: PAN canvas
+    // 3. Right-Click, Middle-Click, or Space+Click: PAN canvas
     if (event.button === 2 || event.button === 1 || isSpacePressed) {
       isPanning = true;
       panStartX = event.clientX - studio.panX;
@@ -162,15 +186,22 @@
       return;
     }
 
-    // 4. If clicking on a track line, select the detection block and allow dragging the entire block
+    // 4. If clicking on a track line, select block if not already selected, and start group drag
     const trackGroup = (event.target as HTMLElement).closest('.clickable-track');
     if (trackGroup && event.button === 0) {
       const cId = trackGroup.getAttribute('data-circuit');
       if (cId) {
-        studio.selectCircuit(cId);
-        isGroupDragging = true;
-        lastDragPos = { x: canvasX, y: canvasY };
-        hasDragged = false;
+        // If the circuit or its nodes are NOT already part of active selection, select circuit
+        const isAlreadySelected = studio.selectedCircuitId === cId ||
+          (studio.selectedNodeIds.length > 0 && studio.project?.graph.edges.some(
+            (e) => getEdgeCircuitId(e) === cId && (studio.selectedNodeIds.includes(e.from) || studio.selectedNodeIds.includes(e.to))
+          ));
+
+        if (!isAlreadySelected) {
+          studio.selectCircuit(cId);
+        }
+
+        startGroupDrag(canvasX, canvasY);
         return;
       }
     }
@@ -195,11 +226,19 @@
     if (isPanning) {
       studio.panX = event.clientX - panStartX;
       studio.panY = event.clientY - panStartY;
-    } else if (isGroupDragging && studio.project && studio.selectedNodeId) {
+    } else if (isGroupDragging && studio.project) {
       hasDragged = true;
-      const canvasX = (event.clientX - rect.left - studio.panX) / studio.zoom;
-      const canvasY = (event.clientY - rect.top - studio.panY) / studio.zoom;
-      studio.updateNodePosition(studio.selectedNodeId, canvasX, canvasY);
+      const totalDx = Math.round((canvasX - dragStartCanvas.x) / 10) * 10;
+      // Snap vertical delta to discrete corridor lanes (50px increments: 0, ±50, ±100...)
+      const totalDy = Math.round((canvasY - dragStartCanvas.y) / 50) * 50;
+
+      for (const [id, initialPos] of initialNodePositions) {
+        const node = studio.project.graph.nodes[id];
+        if (node) {
+          node.x = initialPos.x + totalDx;
+          node.y = initialPos.y + totalDy;
+        }
+      }
     } else if (isMarquee) {
       const canvasX = (event.clientX - rect.left - studio.panX) / studio.zoom;
       const canvasY = (event.clientY - rect.top - studio.panY) / studio.zoom;
@@ -264,19 +303,18 @@
 
   function startNodeDrag(event: MouseEvent, node: TrackNode) {
     event.stopPropagation();
-    draggingNodeId = node.id;
-    hasDragged = false;
-
-    // If node is already part of multi-selection, preserve group selection for dragging
-    if (!studio.selectedNodeIds.includes(node.id)) {
-      studio.selectNode(node.id, event.shiftKey);
-    }
-
     const rect = svgElement?.getBoundingClientRect();
     if (!rect) return;
-    const mouseX = (event.clientX - rect.left - studio.panX) / studio.zoom;
-    const mouseY = (event.clientY - rect.top - studio.panY) / studio.zoom;
-    dragOffset = { x: mouseX - node.x, y: mouseY - node.y };
+    const canvasX = (event.clientX - rect.left - studio.panX) / studio.zoom;
+    const canvasY = (event.clientY - rect.top - studio.panY) / studio.zoom;
+
+    // If node is already part of multi-selection, drag the whole group!
+    if (studio.selectedNodeIds.includes(node.id)) {
+      startGroupDrag(canvasX, canvasY);
+    } else {
+      studio.selectNode(node.id, event.shiftKey);
+      startGroupDrag(canvasX, canvasY);
+    }
   }
 
   function getEdgeCircuitId(edge: TrackEdge): string {
