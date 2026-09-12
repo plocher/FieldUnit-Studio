@@ -589,7 +589,6 @@ export class StudioState {
           }
 
           this.selectNode(draggedId, false);
-          this.renumberAppliancesWestToEast();
           this.runDrc();
           this.synthesizeRoutes();
           return;
@@ -611,7 +610,6 @@ export class StudioState {
           draggedNode.y = targetNode.y;
 
           this.selectNode(draggedId, false);
-          this.renumberAppliancesWestToEast();
           this.runDrc();
           this.synthesizeRoutes();
           return;
@@ -631,7 +629,6 @@ export class StudioState {
           draggedNode.y = targetNode.y;
 
           this.selectNode(draggedId, false);
-          this.renumberAppliancesWestToEast();
           this.runDrc();
           this.synthesizeRoutes();
           return;
